@@ -8,7 +8,7 @@ const SHEETS_BASE = "https://connector-gateway.lovable.dev/google_sheets/v4";
 const DRIVE_BASE = "https://connector-gateway.lovable.dev/google_drive";
 
 function headers(connectionKey: string | undefined): Record<string, string> {
-  const lovableKey = process.env.LOVABLE_API_KEY;
+  const lovableKey = process.env["LOVABLE_API_KEY"];
   if (!lovableKey || !connectionKey) {
     throw new Error("Google connection is not configured for this app.");
   }
@@ -29,7 +29,7 @@ async function parseOrThrow(response: Response, what: string) {
 
 export async function getValues(range: string): Promise<string[][]> {
   const res = await fetch(`${SHEETS_BASE}/spreadsheets/${SPREADSHEET_ID}/values/${range}`, {
-    headers: headers(process.env.GOOGLE_SHEETS_API_KEY),
+    headers: headers(process.env["GOOGLE_SHEETS_API_KEY"]),
   });
   const data = await parseOrThrow(res, `Read ${range}`);
   return (data.values as string[][]) ?? [];
@@ -38,7 +38,7 @@ export async function getValues(range: string): Promise<string[][]> {
 export async function batchGetValues(ranges: string[]): Promise<string[][][]> {
   const qs = ranges.map((r) => `ranges=${r}`).join("&");
   const res = await fetch(`${SHEETS_BASE}/spreadsheets/${SPREADSHEET_ID}/values:batchGet?${qs}`, {
-    headers: headers(process.env.GOOGLE_SHEETS_API_KEY),
+    headers: headers(process.env["GOOGLE_SHEETS_API_KEY"]),
   });
   const data = await parseOrThrow(res, "Read master data");
   return (data.valueRanges as { values?: string[][] }[]).map((v) => v.values ?? []);
@@ -49,7 +49,7 @@ export async function appendRow(range: string, row: (string | number)[]): Promis
     `${SHEETS_BASE}/spreadsheets/${SPREADSHEET_ID}/values/${range}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
     {
       method: "POST",
-      headers: { ...headers(process.env.GOOGLE_SHEETS_API_KEY), "Content-Type": "application/json" },
+      headers: { ...headers(process.env["GOOGLE_SHEETS_API_KEY"]), "Content-Type": "application/json" },
       body: JSON.stringify({ values: [row] }),
     },
   );
@@ -73,7 +73,7 @@ export async function uploadReceipt(
 
   const res = await fetch(`${DRIVE_BASE}/upload/drive/v3/files?uploadType=multipart`, {
     method: "POST",
-    headers: headers(process.env.GOOGLE_DRIVE_API_KEY),
+    headers: headers(process.env["GOOGLE_DRIVE_API_KEY"]),
     body: form,
   });
   const data = await parseOrThrow(res, "Upload receipt");

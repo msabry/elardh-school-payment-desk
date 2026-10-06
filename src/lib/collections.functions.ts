@@ -30,7 +30,7 @@ export const getMasterData = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async (): Promise<MasterData> => {
     const gw = await import("./google-gateway");
-    const [customers, kids, programs, enrollments] = await gw.batchGetValues([
+    const [customers = [], kids = [], programs = [], enrollments = []] = await gw.batchGetValues([
       "Customers!A2:C1000",
       "Kids!A2:C1000",
       "Programs!A2:B1000",
@@ -39,14 +39,14 @@ export const getMasterData = createServerFn({ method: "GET" })
     return {
       customers: customers
         .filter((r) => r[0])
-        .map((r) => ({ id: r[0], name: r[1] ?? "", phone: r[2] ?? "" })),
+        .map((r) => ({ id: r[0]!, name: r[1] ?? "", phone: r[2] ?? "" })),
       kids: kids
         .filter((r) => r[0])
-        .map((r) => ({ id: r[0], customerId: r[1] ?? "", name: r[2] ?? "" })),
-      programs: programs.filter((r) => r[0]).map((r) => ({ id: r[0], name: r[1] ?? "" })),
+        .map((r) => ({ id: r[0]!, customerId: r[1] ?? "", name: r[2] ?? "" })),
+      programs: programs.filter((r) => r[0]).map((r) => ({ id: r[0]!, name: r[1] ?? "" })),
       enrollments: enrollments
         .filter((r) => r[0])
-        .map((r) => ({ kidId: r[0], programId: r[1] ?? "" })),
+        .map((r) => ({ kidId: r[0]!, programId: r[1] ?? "" })),
     };
   });
 
