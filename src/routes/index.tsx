@@ -36,7 +36,7 @@ export const Route = createFileRoute("/")({
 type Role =
   | { state: "loading" }
   | { state: "signedOut" }
-  | { state: "unauthorized"; email?: string }
+  | { state: "unauthorized"; email: string | undefined }
   | { state: "ready"; name: string; role: string; email: string };
 
 function Index() {
@@ -306,12 +306,27 @@ function Accountant1Form({ master }: { master: MasterData }) {
   }
 
   async function submit() {
-    if (!customer) return toast.error("Please pick a customer");
-    if (!kidId) return toast.error("Please pick a child");
-    if (!programId) return toast.error("Please pick a program");
+    if (!customer) {
+      toast.error("Please pick a customer");
+      return;
+    }
+    if (!kidId) {
+      toast.error("Please pick a child");
+      return;
+    }
+    if (!programId) {
+      toast.error("Please pick a program");
+      return;
+    }
     const amt = Number(amount);
-    if (!amt || amt <= 0) return toast.error("Enter a valid amount");
-    if (!reference.trim()) return toast.error("Enter the transfer reference");
+    if (!amt || amt <= 0) {
+      toast.error("Enter a valid amount");
+      return;
+    }
+    if (!reference.trim()) {
+      toast.error("Enter the transfer reference");
+      return;
+    }
 
     setBusy(true);
     try {
@@ -339,7 +354,7 @@ function Accountant1Form({ master }: { master: MasterData }) {
           programName: program?.name ?? "",
           amount: amt,
           transferReference: reference.trim(),
-          receipt: receiptPayload,
+          ...(receiptPayload ? { receipt: receiptPayload } : {}),
         },
       });
       setDone(result.transactionId);
@@ -472,10 +487,19 @@ function Accountant2Form({ master }: { master: MasterData }) {
   }
 
   async function submit() {
-    if (!customer) return toast.error("Please pick a customer");
+    if (!customer) {
+      toast.error("Please pick a customer");
+      return;
+    }
     const amt = Number(amount);
-    if (!amt || amt <= 0) return toast.error("Enter a valid amount");
-    if (!sms.trim()) return toast.error("Paste the confirmation SMS text");
+    if (!amt || amt <= 0) {
+      toast.error("Enter a valid amount");
+      return;
+    }
+    if (!sms.trim()) {
+      toast.error("Paste the confirmation SMS text");
+      return;
+    }
 
     setBusy(true);
     try {
