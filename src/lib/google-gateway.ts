@@ -53,6 +53,9 @@ export async function appendRow(range: string, row: (string | number)[]): Promis
       body: JSON.stringify({ values: [row] }),
     },
   );
+  await parseOrThrow(res, "Save transaction");
+}
+
 export async function updateValues(
   range: string,
   values: (string | number)[][],
