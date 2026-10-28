@@ -43,7 +43,9 @@ export const getMasterData = createServerFn({ method: "GET" })
       kids: kids
         .filter((r) => r[0])
         .map((r) => ({ id: r[0]!, customerId: r[1] ?? "", name: r[2] ?? "" })),
-      programs: programs.filter((r) => r[0]).map((r) => ({ id: r[0]!, name: r[1] ?? "" })),
+      // Programs rows may hold only the name (column A) with no separate id;
+      // fall back to the id column text as the display name.
+      programs: programs.filter((r) => r[0]).map((r) => ({ id: r[0]!, name: (r[1] ?? "").trim() || r[0]! })),
       enrollments: enrollments
         .filter((r) => r[0])
         .map((r) => ({ kidId: r[0]!, programId: r[1] ?? "" })),
