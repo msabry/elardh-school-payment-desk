@@ -53,7 +53,22 @@ export async function appendRow(range: string, row: (string | number)[]): Promis
       body: JSON.stringify({ values: [row] }),
     },
   );
-  await parseOrThrow(res, "Save transaction");
+export async function updateValues(
+  range: string,
+  values: (string | number)[][],
+): Promise<void> {
+  const res = await fetch(
+    `${SHEETS_BASE}/spreadsheets/${SPREADSHEET_ID}/values/${range}?valueInputOption=RAW`,
+    {
+      method: "PUT",
+      headers: {
+        ...headers(process.env["GOOGLE_SHEETS_API_KEY"]),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ values }),
+    },
+  );
+  await parseOrThrow(res, "Update cells");
 }
 
 export async function uploadReceipt(

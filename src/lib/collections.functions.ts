@@ -93,7 +93,9 @@ export const submitCollection = createServerFn({ method: "POST" })
     const date = new Date().toISOString();
     const recordedBy = (context.claims.email as string | undefined) ?? context.userId;
 
-    await gw.appendRow("Transactions!A1:K1", [
+    // Column L holds the review status; new collections start as "pending"
+    // until the other accountant confirms them on the review page.
+    await gw.appendRow("Transactions!A1:L1", [
       transactionId,
       date,
       data.customerId,
@@ -105,6 +107,7 @@ export const submitCollection = createServerFn({ method: "POST" })
       data.smsText ?? "",
       receiptFileId,
       recordedBy,
+      "pending",
     ]);
 
     return { transactionId, date, receiptFileId };
