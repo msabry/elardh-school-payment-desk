@@ -244,10 +244,10 @@ function CustomerPicker({
                   setQuery(c.name);
                   setOpen(false);
                 }}
-                className="w-full px-3 py-2.5 text-left text-sm hover:bg-accent"
+                className="w-full px-3 py-2.5 text-right text-sm hover:bg-accent"
               >
                 <span className="font-medium">{c.name}</span>
-                <span className="ml-2 text-xs text-muted-foreground">{c.id}</span>
+                <span className="mr-2 text-xs text-muted-foreground">{c.id}</span>
               </button>
             </li>
           ))}
