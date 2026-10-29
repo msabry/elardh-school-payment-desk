@@ -112,3 +112,62 @@ export const submitCollection = createServerFn({ method: "POST" })
 
     return { transactionId, date, receiptFileId };
   });
+
+export type ReviewTransaction = {
+  transactionId: string;
+  date: string;
+  customerName: string;
+  kidName: string;
+  programName: string;
+  amount: string;
+  transferReference: string;
+  smsText: string;
+  receiptFileId: string;
+  recordedBy: string;
+};
+
+export const getTransactionsForReview = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const myEmail = (context.claims.email as string | undefined)?.toLowerCase() ?? "";
+    const gw = await import("./google-gateway");
+    // Columns: A transaction_id, B date, C customer_id, D customer_name,
+    // E kid_name, F program_name, G amount, H transfer_reference, I sms_text,
+    // J receipt_file_id, K recorded_by, L status.
+    const rows = await gw.getValues("Transactions!A2:L1000");
+    return rows
+      .filter((r) => r[0] && (r[10] ?? "").trim().toLowerCase() !== myEmail)
+      .filter((r) => ((r[11] ?? "") || "pending").trim().toLowerCase() !== "confirmed")
+      .map((r) => ({
+        transactionId: r[0]!,
+        date: r[1] ?? "",
+        customerName: r[3] ?? "",
+        kidName: r[4] ?? "",
+        programName: r[5] ?? "",
+        amount: r[6] ?? "",
+        transferReference: r[7] ?? "",
+        smsText: r[8] ?? "",
+        receiptFileId: r[9] ?? "",
+        recordedBy: r[10] ?? "",
+      }));
+  });
+
+export const confirmTransaction = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { transactionId: string }) => {
+    if (!input?.transactionId) throw new Error("Transaction is required");
+    return input;
+  })
+  .handler(async ({ data, context }) => {
+    const myEmail = (context.claims.email as string | undefined)?.toLowerCase() ?? "";
+    const gw = await import("./google-gateway");
+    const rows = await gw.getValues("Transactions!A2:L1000");
+    const idx = rows.findIndex((r) => r[0] === data.transactionId);
+    if (idx < 0) throw new Error("Transaction not found");
+    const recordedBy = (rows[idx]?.[10] ?? "").trim().toLowerCase();
+    if (recordedBy === myEmail) {
+      throw new Error("You can only review transactions submitted by the other accountant");
+    }
+    await gw.updateValues(`Transactions!L${idx + 2}`, [["confirmed"]]);
+    return { ok: true as const };
+  });
