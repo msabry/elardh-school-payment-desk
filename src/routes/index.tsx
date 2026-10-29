@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Loader2, LogOut, Paperclip, Search, Wallet } from "lucide-react";
@@ -15,16 +15,16 @@ import {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "School Fees Collections" },
+      { title: "تحصيل الرسوم المدرسية" },
       {
         name: "description",
         content:
-          "Mobile-friendly tool for the finance team to record school fee collections into Google Sheets and Google Drive.",
+          "أداة سهلة الاستخدام على الهاتف لفريق المالية لتسجيل تحصيلات الرسوم المدرسية في جدول Google.",
       },
-      { property: "og:title", content: "School Fees Collections" },
+      { property: "og:title", content: "تحصيل الرسوم المدرسية" },
       {
         property: "og:description",
-        content: "Record school fee collections on the go — saved straight to the team spreadsheet.",
+        content: "سجّل تحصيلات الرسوم المدرسية من هاتفك — تُحفظ مباشرة في جدول الفريق.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -80,7 +80,7 @@ function Index() {
       redirect_uri: window.location.origin,
     });
     if (result.error) {
-      toast.error("Sign-in failed. Please try again.");
+      toast.error("فشل تسجيل الدخول. حاول مرة أخرى.");
       setSigningIn(false);
     }
   }
@@ -92,7 +92,7 @@ function Index() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div dir="rtl" className="min-h-screen bg-background">
       <div className="mx-auto flex min-h-screen w-full max-w-md flex-col px-4 pb-10">
         <header className="flex items-center justify-between py-5">
           <div className="flex items-center gap-2">
@@ -100,8 +100,10 @@ function Index() {
               <Wallet className="h-5 w-5" />
             </div>
             <div>
-              <h1 className="text-base font-semibold leading-tight">Fee Collections</h1>
-              <p className="text-xs text-muted-foreground">Finance team</p>
+              <h1 className="text-base font-semibold leading-tight">
+                تحصيل الرسوم المدرسية
+              </h1>
+              <p className="text-xs text-muted-foreground">فريق المالية</p>
             </div>
           </div>
           {role.state === "ready" && (
@@ -109,7 +111,7 @@ function Index() {
               onClick={signOut}
               className="flex items-center gap-1 rounded-lg border border-input px-3 py-1.5 text-xs text-muted-foreground"
             >
-              <LogOut className="h-3.5 w-3.5" /> Sign out
+              <LogOut className="h-3.5 w-3.5" /> تسجيل الخروج
             </button>
           )}
         </header>
@@ -123,7 +125,7 @@ function Index() {
         {role.state === "signedOut" && (
           <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
             <p className="text-sm text-muted-foreground">
-              Sign in with your Google account to record a collection.
+              سجّل الدخول بحساب Google لتسجيل التحصيل.
             </p>
             <button
               onClick={signIn}
@@ -131,23 +133,25 @@ function Index() {
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-medium text-primary-foreground disabled:opacity-60"
             >
               {signingIn && <Loader2 className="h-4 w-4 animate-spin" />}
-              Sign in with Google
+              تسجيل الدخول بحساب Google
             </button>
           </div>
         )}
 
         {role.state === "unauthorized" && (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
-            <p className="text-sm font-medium">This account isn't on the accountants list.</p>
+            <p className="text-sm font-medium">
+              هذا الحساب غير مضاف في قائمة المحاسبين.
+            </p>
             <p className="text-xs text-muted-foreground">
-              {role.email ? `Signed in as ${role.email}. ` : ""}
-              Ask the sheet owner to add your email to the Accountants tab.
+              {role.email ? `سجّلت الدخول كـ ${role.email}. ` : ""}
+              اطلب من مالك الجدول إضافة بريدك إلى تبويب Accountants.
             </p>
             <button
               onClick={signOut}
               className="rounded-xl border border-input px-4 py-2 text-sm"
             >
-              Sign out
+              تسجيل الخروج
             </button>
           </div>
         )}
@@ -160,13 +164,19 @@ function Index() {
 
         {role.state === "ready" && master && (
           <>
-            <p className="mb-4 text-sm text-muted-foreground">
-              Hello {role.name || role.email} — you're recording as{" "}
+            <p className="mb-3 text-sm text-muted-foreground">
+              أهلاً {role.name || role.email} — تسجّل باسم{" "}
               <span className="font-medium text-foreground">
-                {role.role === "accountant2" ? "Accountant 2" : "Accountant 1"}
+                {role.role === "accountant2" ? "المحاسب الثاني" : "المحاسب الأول"}
               </span>
               .
             </p>
+            <Link
+              to="/review"
+              className="mb-4 flex items-center justify-center gap-2 rounded-xl border border-input bg-card px-4 py-2.5 text-sm font-medium text-foreground"
+            >
+              تحصيلات بانتظار المراجعة
+            </Link>
             {role.role === "accountant2" ? (
               <Accountant2Form master={master} />
             ) : (
@@ -208,7 +218,7 @@ function CustomerPicker({
 
   return (
     <div ref={boxRef} className="relative">
-      <label className="mb-1 block text-sm font-medium">Customer</label>
+      <label className="mb-1 block text-sm font-medium">العميل</label>
       <div className="flex items-center gap-2 rounded-xl border border-input bg-card px-3">
         <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
         <input
@@ -219,7 +229,7 @@ function CustomerPicker({
             onChange(null);
           }}
           onFocus={() => setOpen(true)}
-          placeholder="Type the first letters…"
+          placeholder="اكتب أول حروف الاسم…"
           className="w-full bg-transparent py-3 text-sm outline-none"
         />
       </div>
@@ -245,7 +255,7 @@ function CustomerPicker({
       )}
       {open && query.trim() && matches.length === 0 && (
         <div className="absolute z-20 mt-1 w-full rounded-xl border border-border bg-popover px-3 py-2.5 text-sm text-muted-foreground shadow-lg">
-          No customer matches "{query}"
+          لا يوجد عميل مطابق لـ "{query}"
         </div>
       )}
     </div>
@@ -259,13 +269,15 @@ const labelCls = "mb-1 block text-sm font-medium";
 function SuccessBanner({ transactionId, onReset }: { transactionId: string; onReset: () => void }) {
   return (
     <div className="rounded-2xl border border-border bg-card p-5 text-center">
-      <p className="text-sm font-medium text-foreground">Collection saved</p>
-      <p className="mt-1 break-all text-xs text-muted-foreground">Transaction {transactionId}</p>
+      <p className="text-sm font-medium text-foreground">تم حفظ التحصيل</p>
+      <p className="mt-1 break-all text-xs text-muted-foreground">
+        عملية رقم {transactionId}
+      </p>
       <button
         onClick={onReset}
         className="mt-4 w-full rounded-xl bg-primary px-4 py-3 text-sm font-medium text-primary-foreground"
       >
-        Record another
+        تسجيل تحصيل آخر
       </button>
     </div>
   );
@@ -307,24 +319,24 @@ function Accountant1Form({ master }: { master: MasterData }) {
 
   async function submit() {
     if (!customer) {
-      toast.error("Please pick a customer");
+      toast.error("اختر العميل من القائمة");
       return;
     }
     if (!kidId) {
-      toast.error("Please pick a child");
+      toast.error("اختر الطفل");
       return;
     }
     if (!programId) {
-      toast.error("Please pick a program");
+      toast.error("اختر الدورة");
       return;
     }
     const amt = Number(amount);
     if (!amt || amt <= 0) {
-      toast.error("Enter a valid amount");
+      toast.error("أدخل مبلغاً صحيحاً");
       return;
     }
     if (!reference.trim()) {
-      toast.error("Enter the transfer reference");
+      toast.error("أدخل مرجع التحويل");
       return;
     }
 
@@ -360,7 +372,7 @@ function Accountant1Form({ master }: { master: MasterData }) {
       setDone(result.transactionId);
     } catch (e) {
       console.error(e);
-      toast.error(e instanceof Error ? e.message : "Could not save the collection");
+      toast.error(e instanceof Error ? e.message : "لم نتمكن من حفظ التحصيل");
     } finally {
       setBusy(false);
     }
@@ -379,7 +391,7 @@ function Accountant1Form({ master }: { master: MasterData }) {
       />
 
       <div>
-        <label className={labelCls}>Child</label>
+        <label className={labelCls}>الطفل</label>
         <select
           value={kidId}
           onChange={(e) => {
@@ -389,7 +401,7 @@ function Accountant1Form({ master }: { master: MasterData }) {
           disabled={!customer}
           className={inputCls + " disabled:opacity-50"}
         >
-          <option value="">{customer ? "Select child…" : "Pick a customer first"}</option>
+          <option value="">{customer ? "اختر الطفل…" : "اختر العميل أولاً"}</option>
           {kids.map((k) => (
             <option key={k.id} value={k.id}>
               {k.name}
@@ -399,14 +411,14 @@ function Accountant1Form({ master }: { master: MasterData }) {
       </div>
 
       <div>
-        <label className={labelCls}>Program / course</label>
+        <label className={labelCls}>البرنامج / الدورة</label>
         <select
           value={programId}
           onChange={(e) => setProgramId(e.target.value)}
           disabled={!kidId}
           className={inputCls + " disabled:opacity-50"}
         >
-          <option value="">{kidId ? "Select program…" : "Pick a child first"}</option>
+          <option value="">{kidId ? "اختر الدورة…" : "اختر الطفل أولاً"}</option>
           {programs.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
@@ -416,7 +428,7 @@ function Accountant1Form({ master }: { master: MasterData }) {
       </div>
 
       <div>
-        <label className={labelCls}>Amount collected</label>
+        <label className={labelCls}>المبلغ المحصل</label>
         <input
           type="number"
           inputMode="decimal"
@@ -430,20 +442,20 @@ function Accountant1Form({ master }: { master: MasterData }) {
       </div>
 
       <div>
-        <label className={labelCls}>Transfer reference</label>
+        <label className={labelCls}>مرجع التحويل</label>
         <input
           value={reference}
           onChange={(e) => setReference(e.target.value)}
-          placeholder="e.g. bank transfer reference number"
+          placeholder="مثال: رقم مرجعية التحويل البنكي"
           className={inputCls}
         />
       </div>
 
       <div>
-        <label className={labelCls}>Receipt (optional)</label>
+        <label className={labelCls}>الإيصال (اختياري)</label>
         <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-input bg-card px-3 py-3 text-sm text-muted-foreground">
           <Paperclip className="h-4 w-4" />
-          {receipt ? receipt.name : "Attach transfer receipt…"}
+          {receipt ? receipt.name : "أرفق إيصال التحويل…"}
           <input
             type="file"
             accept="image/*,application/pdf"
@@ -459,7 +471,7 @@ function Accountant1Form({ master }: { master: MasterData }) {
         className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3.5 text-sm font-semibold text-primary-foreground disabled:opacity-60"
       >
         {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-        Save collection
+        حفظ التحصيل
       </button>
     </div>
   );
@@ -488,16 +500,16 @@ function Accountant2Form({ master }: { master: MasterData }) {
 
   async function submit() {
     if (!customer) {
-      toast.error("Please pick a customer");
+      toast.error("اختر العميل من القائمة");
       return;
     }
     const amt = Number(amount);
     if (!amt || amt <= 0) {
-      toast.error("Enter a valid amount");
+      toast.error("أدخل مبلغاً صحيحاً");
       return;
     }
     if (!sms.trim()) {
-      toast.error("Paste the confirmation SMS text");
+      toast.error("الصق نص رسالة التأكيد");
       return;
     }
 
@@ -514,7 +526,7 @@ function Accountant2Form({ master }: { master: MasterData }) {
       setDone(result.transactionId);
     } catch (e) {
       console.error(e);
-      toast.error(e instanceof Error ? e.message : "Could not save the collection");
+      toast.error(e instanceof Error ? e.message : "لم نتمكن من حفظ التحصيل");
     } finally {
       setBusy(false);
     }
@@ -525,7 +537,7 @@ function Accountant2Form({ master }: { master: MasterData }) {
       <CustomerPicker customers={master.customers} value={customer} onChange={setCustomer} />
 
       <div>
-        <label className={labelCls}>Amount collected</label>
+        <label className={labelCls}>المبلغ المحصل</label>
         <input
           type="number"
           inputMode="decimal"
@@ -539,11 +551,11 @@ function Accountant2Form({ master }: { master: MasterData }) {
       </div>
 
       <div>
-        <label className={labelCls}>Confirmation SMS</label>
+        <label className={labelCls}>رسالة تأكيد التحويل</label>
         <textarea
           value={sms}
           onChange={(e) => setSms(e.target.value)}
-          placeholder="Paste the full confirmation SMS text here…"
+          placeholder="الصق نص رسالة التأكيد كاملة هنا…"
           rows={5}
           className={inputCls + " resize-none"}
         />
@@ -555,7 +567,7 @@ function Accountant2Form({ master }: { master: MasterData }) {
         className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3.5 text-sm font-semibold text-primary-foreground disabled:opacity-60"
       >
         {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-        Save collection
+        حفظ التحصيل
       </button>
     </div>
   );
