@@ -171,3 +171,73 @@ export const confirmTransaction = createServerFn({ method: "POST" })
     await gw.updateValues(`Transactions!L${idx + 2}`, [["confirmed"]]);
     return { ok: true as const };
   });
+
+export type Supplier = { id: string; name: string; phone: string };
+
+export const getSuppliers = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async (): Promise<Supplier[]> => {
+    const gw = await import("./google-gateway");
+    // The tab name contains a slash, so read it through batchGet (query param)
+    // instead of the path-based values endpoint.
+    const [rows = []] = await gw.batchGetValues(["'suppliers/employees'!A2:D1000"]);
+    return rows
+      .filter((r) => r[0] && (r[1] ?? "").trim())
+      .map((r) => ({ id: r[0]!, name: (r[1] ?? "").trim(), phone: r[2] ?? "" }));
+  });
+
+type SubmitPaymentInput = {
+  supplierId: string;
+  supplierName: string;
+  expenseItem: string;
+  amount: number;
+  transferReference?: string;
+  receipt?: { name: string; mimeType: string; dataBase64: string };
+};
+
+export const submitPayment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: SubmitPaymentInput) => {
+    if (!input.supplierId || !input.supplierName) throw new Error("Supplier is required");
+    if (!input.expenseItem?.trim()) throw new Error("Expense item is required");
+    if (!input.amount || input.amount <= 0) throw new Error("Amount must be greater than zero");
+    if (input.receipt && input.receipt.dataBase64.length > 7_000_000) {
+      throw new Error("Receipt file is too large (max ~5 MB)");
+    }
+    return input;
+  })
+  .handler(async ({ data, context }) => {
+    const gw = await import("./google-gateway");
+
+    let receiptFileId = "";
+    if (data.receipt) {
+      const safeName = data.receipt.name.replace(/[^\w.\- ]/g, "_");
+      receiptFileId = await gw.uploadReceipt(
+        `${Date.now()}-${safeName}`,
+        data.receipt.mimeType || "application/octet-stream",
+        data.receipt.dataBase64,
+      );
+    }
+
+    const paymentId = `PY-${Date.now().toString(36).toUpperCase()}-${Math.random()
+      .toString(36)
+      .slice(2, 6)
+      .toUpperCase()}`;
+    const date = new Date().toISOString();
+    const recordedBy = (context.claims.email as string | undefined) ?? context.userId;
+
+    await gw.appendRow("Payments!A1:J1", [
+      paymentId,
+      date,
+      data.supplierId,
+      data.supplierName,
+      data.expenseItem.trim(),
+      data.amount,
+      data.transferReference ?? "",
+      receiptFileId,
+      recordedBy,
+      "pending",
+    ]);
+
+    return { paymentId, date, receiptFileId };
+  });
