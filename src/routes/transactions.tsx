@@ -81,11 +81,16 @@ function TransactionsPage() {
                     </p>
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">
+                    {t.transactionType.includes("supplier") ? "دفعة لمورّد" : "تحصيل عميل"} ·{" "}
                     {new Date(t.date).toLocaleDateString("ar-EG")} · {WALLET_LABELS[t.wallet] ?? "—"} ·{" "}
                     {t.status === "confirmed" ? "مؤكد" : "في انتظار المراجعة"}
                   </p>
                   {(t.kidName || t.programName) && (
-                    <p className="mt-1 text-xs">{[t.kidName, t.programName].filter(Boolean).join(" — ")}</p>
+                    <p className="mt-1 text-xs">
+                      {t.transactionType.includes("supplier")
+                        ? `بند الصرف: ${t.programName || "—"}`
+                        : [t.kidName, t.programName].filter(Boolean).join(" — ")}
+                    </p>
                   )}
                   {t.notes && <p className="mt-1 text-xs text-muted-foreground">ملاحظات: {t.notes}</p>}
                 </div>

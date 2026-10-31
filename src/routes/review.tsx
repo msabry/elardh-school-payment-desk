@@ -30,6 +30,9 @@ const WALLET_LABELS: Record<string, string> = {
 };
 type Edits = { kidName: string; programName: string; notes: string };
 
+/** Column C holds a supplier id for these rows, not a customer id. */
+const isPayment = (t: ReviewTransaction) => t.transactionType.includes("supplier");
+
 export const Route = createFileRoute("/review")({
   head: () => ({
     meta: [
@@ -118,9 +121,11 @@ function ReviewPage() {
       const isAcc1 = load.state === "ready" && load.isAcc1;
       const e = editOf(t);
       await confirmTransaction({
-        data: isAcc1
+        data: isAcc1 && !isPayment(t)
           ? { transactionId: t.transactionId, kidName: e.kidName, programName: e.programName, notes: e.notes.trim() }
-          : { transactionId: t.transactionId },
+          : isAcc1
+            ? { transactionId: t.transactionId, notes: e.notes.trim() }
+            : { transactionId: t.transactionId },
       });
       toast.success("تم تأكيد التحصيل");
       setLoad((prev) =>
@@ -207,7 +212,7 @@ function ReviewPage() {
                   <div>
                     <p className="text-sm font-semibold">{t.customerName}</p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      {formatDate(t.date)}
+                      {isPayment(t) ? "دفعة لمورّد" : "تحصيل من عميل"} · {formatDate(t.date)}
                     </p>
                   </div>
                   <p className="whitespace-nowrap text-sm font-semibold text-primary">
@@ -216,11 +221,11 @@ function ReviewPage() {
                 </div>
 
                 <dl className="mt-3 space-y-1.5 text-xs">
-                  {!load.isAcc1 && t.kidName && (
+                  {!load.isAcc1 && !isPayment(t) && t.kidName && (
                     <Row label="الطفل" value={t.kidName} />
                   )}
                   {!load.isAcc1 && t.programName && (
-                    <Row label="الدورة" value={t.programName} />
+                    <Row label={isPayment(t) ? "بند الصرف" : "الدورة"} value={t.programName} />
                   )}
                   {t.wallet && (
                     <Row label="المحفظة" value={WALLET_LABELS[t.wallet] ?? t.wallet} />
@@ -343,7 +348,10 @@ function AccountantEdits({
   value: Edits;
   onChange: (p: Partial<Edits>) => void;
 }) {
-  const kids = master.kids.filter((k) => k.customerId === t.customerId);
+  // For supplier payments column C holds the supplier id, so the child/program
+  // pickers only make sense on customer collections.
+  const payment = isPayment(t);
+  const kids = payment ? [] : master.kids.filter((k) => k.customerId === t.customerId);
   const kidNames = kids.map((k) => k.name);
   if (value.kidName && !kidNames.includes(value.kidName)) kidNames.unshift(value.kidName);
   const kid = kids.find((k) => k.name === value.kidName);
@@ -354,24 +362,28 @@ function AccountantEdits({
 
   return (
     <div className="mt-3 space-y-2.5 border-t border-border pt-3">
-      <div>
-        <label className="mb-1 block text-xs font-medium">الطفل</label>
-        <select value={value.kidName} onChange={(e) => onChange({ kidName: e.target.value })} className={fieldCls}>
-          <option value="">اختر الطفل…</option>
-          {kidNames.map((n) => (
-            <option key={n} value={n}>{n}</option>
-          ))}
-        </select>
-      </div>
-      <div>
-        <label className="mb-1 block text-xs font-medium">البرنامج / الدورة</label>
-        <select value={value.programName} onChange={(e) => onChange({ programName: e.target.value })} className={fieldCls}>
-          <option value="">اختر الدورة…</option>
-          {progNames.map((n) => (
-            <option key={n} value={n}>{n}</option>
-          ))}
-        </select>
-      </div>
+      {!payment && (
+        <>
+          <div>
+            <label className="mb-1 block text-xs font-medium">الطفل</label>
+            <select value={value.kidName} onChange={(e) => onChange({ kidName: e.target.value })} className={fieldCls}>
+              <option value="">اختر الطفل…</option>
+              {kidNames.map((n) => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium">البرنامج / الدورة</label>
+            <select value={value.programName} onChange={(e) => onChange({ programName: e.target.value })} className={fieldCls}>
+              <option value="">اختر الدورة…</option>
+              {progNames.map((n) => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+            </select>
+          </div>
+        </>
+      )}
       <div>
         <label className="mb-1 block text-xs font-medium">ملاحظات</label>
         <textarea
