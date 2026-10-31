@@ -26,7 +26,7 @@ function runIdFetch() {
 }
 
 export async function extractSms(smsText: string): Promise<SmsExtraction> {
-  const apiKey = process.env.LOVABLE_API_KEY;
+  const apiKey = process.env["LOVABLE_API_KEY"];
   if (!apiKey) throw new Error("AI is not configured");
   const provider = createOpenAI({
     baseURL: "https://ai.gateway.lovable.dev/v1",
@@ -42,7 +42,7 @@ export async function extractSms(smsText: string): Promise<SmsExtraction> {
       "wallet: 'instapay' if InstaPay/IPN/انستاباي, 'vodaphone' if Vodafone Cash/فودافون كاش, 'cash' only if explicitly cash, else null; " +
       "transferReference: the reference/transaction number (رقم مرجعي / Ref). Use null for anything not present.",
     messages: [{ role: "user", content: smsText.slice(0, 4000) }],
-    experimental_output: Output.object({ schema }),
+    output: Output.object({ schema }),
     maxRetries: 0,
     providerOptions: {
       openai: {
@@ -55,7 +55,7 @@ export async function extractSms(smsText: string): Promise<SmsExtraction> {
     },
   });
   try {
-    const out = await result.experimental_output;
+    const out = await result.output;
     return out as SmsExtraction;
   } catch (e) {
     if (NoObjectGeneratedError.isInstance(e)) throw new Error("لم نتمكن من قراءة الرسالة");
