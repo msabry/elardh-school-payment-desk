@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyFilters, emptyFilters, findMismatches, isSupplierPayment } from "@/lib/filters";
+import { applyFilters, emptyFilters, findMismatches, isSupplierPayment, isUsableMasterRow } from "@/lib/filters";
 
 const items = [
   { id: 1, wallet: "instapay", status: "pending", date: "2026-10-26T14:35:34.143Z" },
@@ -37,3 +37,18 @@ describe("transaction type (column N)", () => {
     expect(isSupplierPayment("")).toBe(false);
   });
 });
+
+describe("master-data rows need an id and a name", () => {
+  it("keeps customer rows that have both", () => {
+    expect(isUsableMasterRow(["C001", "رضوى نبيل", "0100"], 1)).toBe(true);
+  });
+  it("drops customer rows with an id but no name", () => {
+    expect(isUsableMasterRow(["C004"], 1)).toBe(false);
+    expect(isUsableMasterRow(["C004", "   "], 1)).toBe(false);
+  });
+  it("drops kid rows with no name in column C", () => {
+    expect(isUsableMasterRow(["6", "C001", "حلا"], 2)).toBe(true);
+    expect(isUsableMasterRow(["6", "C001"], 2)).toBe(false);
+  });
+});
+
