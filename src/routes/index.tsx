@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { findMismatches } from "@/lib/filters";
 import { toast } from "sonner";
-import { Loader2, LogOut, Paperclip, Search, Wallet } from "lucide-react";
+import { BadgeCheck, Banknote, ListChecks, Loader2, LogOut, Paperclip, Search, Wallet } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
@@ -166,36 +166,46 @@ function Index() {
 
         {role.state === "ready" && master && (
           <>
-            <p className="mb-3 text-sm text-muted-foreground">
+            <p className="mb-4 text-sm text-muted-foreground">
               أهلاً {role.name || role.email} — تسجّل باسم{" "}
               <span className="font-medium text-foreground">
                 {role.role === "accountant2" ? "المحاسب الثاني" : "المحاسب الأول"}
               </span>
               .
             </p>
-            <Link
-              to="/review"
-              className="mb-4 flex items-center justify-center gap-2 rounded-xl border border-input bg-card px-4 py-2.5 text-sm font-medium text-foreground"
-            >
-              تحصيلات بانتظار المراجعة
-            </Link>
-            <Link
-              to="/transactions"
-              className="mb-4 flex items-center justify-center gap-2 rounded-xl border border-input bg-card px-4 py-2.5 text-sm font-medium text-foreground"
-            >
-              كل التحصيلات
-            </Link>
-            <Link
-              to="/payments"
-              className="mb-4 flex items-center justify-center gap-2 rounded-xl border border-input bg-card px-4 py-2.5 text-sm font-medium text-foreground"
-            >
-              تسجيل دفعة لمورّد
-            </Link>
-            {role.role === "accountant2" ? (
-              <Accountant2Form master={master} />
-            ) : (
-              <Accountant1Form master={master} />
-            )}
+
+            <div className="rounded-2xl border border-border bg-card p-3">
+              <p className="mb-2 text-xs font-medium text-muted-foreground">
+                السجلات والمراجعة
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                <Link to="/review" className={tileCls}>
+                  <BadgeCheck className="h-5 w-5 text-primary" />
+                  بانتظار المراجعة
+                </Link>
+                <Link to="/transactions" className={tileCls}>
+                  <ListChecks className="h-5 w-5 text-primary" />
+                  كل التحصيلات
+                </Link>
+                <Link to="/payments" className={tileCls}>
+                  <Banknote className="h-5 w-5 text-primary" />
+                  دفعة لمورّد
+                </Link>
+              </div>
+            </div>
+
+            <div className="my-6 border-t border-dashed border-border" />
+
+            <section className="rounded-2xl border border-border bg-card p-4">
+              <h2 className="mb-4 text-sm font-semibold text-foreground">
+                تسجيل تحصيل جديد
+              </h2>
+              {role.role === "accountant2" ? (
+                <Accountant2Form master={master} />
+              ) : (
+                <Accountant1Form master={master} />
+              )}
+            </section>
           </>
         )}
       </div>
@@ -279,6 +289,8 @@ function CustomerPicker({
 const inputCls =
   "w-full rounded-xl border border-input bg-card px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-ring";
 const labelCls = "mb-1 block text-sm font-medium";
+const tileCls =
+  "flex flex-col items-center gap-1.5 rounded-xl border border-input bg-background px-1.5 py-3 text-center text-[11px] font-medium leading-tight text-foreground transition-colors hover:border-primary hover:bg-accent";
 
 function SuccessBanner({ transactionId, onReset }: { transactionId: string; onReset: () => void }) {
   return (
