@@ -63,7 +63,10 @@ function Index() {
           setRole({ state: "unauthorized", email: r.email });
         } else {
           setRole({ state: "ready", name: r.name, role: r.role, email: r.email });
-          setMaster(await getMasterData());
+          const [m, review] = await Promise.all([getMasterData(), getTransactionsForReview()]);
+          if (cancelled) return;
+          setMaster(m);
+          setPendingCount(review.filter((t) => t.status === "pending").length);
         }
       } catch (e) {
         console.error(e);
