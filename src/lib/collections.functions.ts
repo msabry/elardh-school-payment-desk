@@ -97,7 +97,8 @@ export const submitCollection = createServerFn({ method: "POST" })
     const date = new Date().toISOString();
     const recordedBy = (context.claims.email as string | undefined) ?? context.userId;
 
-    // Column L = wallet, M = review status, N = transaction_type, O = notes.
+    // C = customer_supplier_id (the customer id here), L = wallet,
+    // M = review status, N = transaction_type, O = notes.
     await gw.appendRow("Transactions!A1:O1", [
       transactionId,
       date,
@@ -134,6 +135,7 @@ export type ReviewTransaction = {
   smsText: string;
   receiptFileId: string;
   recordedBy: string;
+  transactionType: string;
 };
 
 export const getTransactionsForReview = createServerFn({ method: "GET" })
@@ -141,9 +143,10 @@ export const getTransactionsForReview = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const myEmail = (context.claims.email as string | undefined)?.toLowerCase() ?? "";
     const gw = await import("./google-gateway");
-    // Columns: A transaction_id, B date, C customer_id, D customer_name,
+    // Columns: A transaction_id, B date, C customer_supplier_id (customer id for
+    // customer collections, supplier id for supplier payments), D customer_name,
     // E kid_name, F program_name, G amount, H transfer_reference, I sms_text,
-    // J receipt_file_id, K recorded_by, L wallet, M status, N notes.
+    // J receipt_file_id, K recorded_by, L wallet, M status, N transaction_type, O notes.
     const rows = await gw.getValues("Transactions!A2:O1000");
     return rows
       .filter((r) => r[0] && (r[10] ?? "").trim().toLowerCase() !== myEmail)
@@ -162,6 +165,7 @@ export const getTransactionsForReview = createServerFn({ method: "GET" })
         smsText: r[8] ?? "",
         receiptFileId: r[9] ?? "",
         recordedBy: r[10] ?? "",
+        transactionType: (r[13] ?? "").trim().toLowerCase(),
       }));
   });
 
@@ -251,7 +255,8 @@ export const submitPayment = createServerFn({ method: "POST" })
     const recordedBy = (context.claims.email as string | undefined) ?? context.userId;
 
     // Supplier payments live in the Transactions tab as negative amounts.
-    // C/D hold the supplier, F holds the expense item, N = transaction_type.
+    // C holds the supplier id (customer_supplier_id), D the supplier name,
+    // F the expense item, N = transaction_type.
     await gw.appendRow("Transactions!A1:O1", [
       paymentId,
       date,
@@ -296,6 +301,7 @@ export type TransactionRow = {
   status: string;
   recordedBy: string;
   notes: string;
+  transactionType: string;
 };
 
 export const getAllTransactions = createServerFn({ method: "GET" })
@@ -317,6 +323,7 @@ export const getAllTransactions = createServerFn({ method: "GET" })
         status: ((r[12] ?? "") || "pending").trim().toLowerCase(),
         recordedBy: r[10] ?? "",
         notes: r[14] ?? "",
+        transactionType: (r[13] ?? "").trim().toLowerCase(),
       }))
       .reverse();
   });
