@@ -97,9 +97,8 @@ export const submitCollection = createServerFn({ method: "POST" })
     const date = new Date().toISOString();
     const recordedBy = (context.claims.email as string | undefined) ?? context.userId;
 
-    // Column L = wallet, M = review status ("pending" until the other
-    // accountant confirms), N = reviewer notes.
-    await gw.appendRow("Transactions!A1:N1", [
+    // Column L = wallet, M = review status, N = transaction_type, O = notes.
+    await gw.appendRow("Transactions!A1:O1", [
       transactionId,
       date,
       data.customerId,
@@ -113,6 +112,8 @@ export const submitCollection = createServerFn({ method: "POST" })
       recordedBy,
       data.wallet ?? "",
       "pending",
+      "customer collection",
+      "",
     ]);
 
     return { transactionId, date, receiptFileId };
@@ -143,7 +144,7 @@ export const getTransactionsForReview = createServerFn({ method: "GET" })
     // Columns: A transaction_id, B date, C customer_id, D customer_name,
     // E kid_name, F program_name, G amount, H transfer_reference, I sms_text,
     // J receipt_file_id, K recorded_by, L wallet, M status, N notes.
-    const rows = await gw.getValues("Transactions!A2:N1000");
+    const rows = await gw.getValues("Transactions!A2:O1000");
     return rows
       .filter((r) => r[0] && (r[10] ?? "").trim().toLowerCase() !== myEmail)
       .map((r) => ({
@@ -152,7 +153,7 @@ export const getTransactionsForReview = createServerFn({ method: "GET" })
         customerId: r[2] ?? "",
         customerName: r[3] ?? "",
         wallet: r[11] ?? "",
-        notes: r[13] ?? "",
+        notes: r[14] ?? "",
         status: ((r[12] ?? "") || "pending").trim().toLowerCase(),
         kidName: r[4] ?? "",
         programName: r[5] ?? "",
@@ -175,7 +176,7 @@ export const confirmTransaction = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const myEmail = (context.claims.email as string | undefined)?.toLowerCase() ?? "";
     const gw = await import("./google-gateway");
-    const rows = await gw.getValues("Transactions!A2:N1000");
+    const rows = await gw.getValues("Transactions!A2:O1000");
     const idx = rows.findIndex((r) => r[0] === data.transactionId);
     if (idx < 0) throw new Error("Transaction not found");
     const recordedBy = (rows[idx]?.[10] ?? "").trim().toLowerCase();
@@ -188,8 +189,9 @@ export const confirmTransaction = createServerFn({ method: "POST" })
         [data.kidName ?? rows[idx]?.[4] ?? "", data.programName ?? rows[idx]?.[5] ?? ""],
       ]);
     }
-    await gw.updateValues(`Transactions!M${row}:N${row}`, [
-      ["confirmed", data.notes ?? rows[idx]?.[13] ?? ""],
+    await gw.updateValues(`Transactions!M${row}:M${row}`, [["confirmed"]]);
+    await gw.updateValues(`Transactions!O${row}:O${row}`, [
+      [data.notes ?? rows[idx]?.[14] ?? ""],
     ]);
     return { ok: true as const };
   });
@@ -248,17 +250,24 @@ export const submitPayment = createServerFn({ method: "POST" })
     const date = new Date().toISOString();
     const recordedBy = (context.claims.email as string | undefined) ?? context.userId;
 
-    await gw.appendRow("Payments!A1:J1", [
+    // Supplier payments live in the Transactions tab as negative amounts.
+    // C/D hold the supplier, F holds the expense item, N = transaction_type.
+    await gw.appendRow("Transactions!A1:O1", [
       paymentId,
       date,
       data.supplierId,
       data.supplierName,
+      "",
       data.expenseItem.trim(),
-      data.amount,
+      -Math.abs(data.amount),
       data.transferReference ?? "",
+      "",
       receiptFileId,
       recordedBy,
+      "",
       "pending",
+      "supplier payment",
+      "",
     ]);
 
     return { paymentId, date, receiptFileId };
@@ -293,7 +302,7 @@ export const getAllTransactions = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async (): Promise<TransactionRow[]> => {
     const gw = await import("./google-gateway");
-    const rows = await gw.getValues("Transactions!A2:N1000");
+    const rows = await gw.getValues("Transactions!A2:O1000");
     return rows
       .filter((r) => r[0])
       .map((r) => ({
@@ -307,7 +316,7 @@ export const getAllTransactions = createServerFn({ method: "GET" })
         wallet: r[11] ?? "",
         status: ((r[12] ?? "") || "pending").trim().toLowerCase(),
         recordedBy: r[10] ?? "",
-        notes: r[13] ?? "",
+        notes: r[14] ?? "",
       }))
       .reverse();
   });
