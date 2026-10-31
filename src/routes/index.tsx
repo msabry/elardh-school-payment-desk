@@ -196,7 +196,7 @@ function Index() {
 
             <div className="my-6 border-t border-dashed border-border" />
 
-            <section className="rounded-2xl border border-border bg-card p-4">
+            <section className="rounded-2xl border border-border bg-muted p-4">
               <h2 className="mb-4 text-sm font-semibold text-foreground">
                 تسجيل تحصيل جديد
               </h2>
