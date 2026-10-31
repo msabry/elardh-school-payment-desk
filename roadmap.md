@@ -7,3 +7,5 @@
 - [x] Full Arabic RTL translation of the UI (verified)
 - [x] Payments page (/payments) + home link
 - [x] Flip sheet role back to accountant2 (done 2026-10-31)
+- [x] Transactions column C = customer_supplier_id (customer id or supplier id) handled in app
+- [x] Home page: buttons grouped in their own card, dashed separator, titled grey field panel (verified in phone screenshots)
