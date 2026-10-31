@@ -20,6 +20,9 @@ import {
   type ReviewTransaction,
 } from "@/lib/collections.functions";
 
+import { TxFiltersBar } from "@/components/tx-filters";
+import { applyFilters, emptyFilters, type TxFilters } from "@/lib/filters";
+
 const WALLET_LABELS: Record<string, string> = {
   instapay: "إنستاباي",
   vodaphone: "فودافون كاش",
@@ -100,6 +103,7 @@ function ReviewPage() {
     }
   }
 
+  const [filters, setFilters] = useState<TxFilters>({ ...emptyFilters, status: "pending" });
   const [edits, setEdits] = useState<Record<string, Edits>>({});
   function editOf(t: ReviewTransaction): Edits {
     return edits[t.transactionId] ?? { kidName: t.kidName, programName: t.programName, notes: t.notes };
@@ -123,8 +127,8 @@ function ReviewPage() {
         prev.state === "ready"
           ? {
               ...prev,
-              items: prev.items.filter(
-                (x) => x.transactionId !== t.transactionId,
+              items: prev.items.map((x) =>
+                x.transactionId === t.transactionId ? { ...x, status: "confirmed" } : x,
               ),
             }
           : prev,
@@ -184,15 +188,17 @@ function ReviewPage() {
           </div>
         )}
 
-        {load.state === "ready" && load.items.length === 0 && (
+        {load.state === "ready" && <TxFiltersBar value={filters} onChange={setFilters} />}
+
+        {load.state === "ready" && applyFilters(load.items, filters).length === 0 && (
           <div className="flex flex-1 items-center justify-center text-center text-sm text-muted-foreground">
-            لا توجد تحصيلات في انتظار المراجعة
+            لا توجد تحصيلات مطابقة
           </div>
         )}
 
-        {load.state === "ready" && load.items.length > 0 && (
+        {load.state === "ready" && applyFilters(load.items, filters).length > 0 && (
           <div className="space-y-3">
-            {load.items.map((t) => (
+            {applyFilters(load.items, filters).map((t) => (
               <div
                 key={t.transactionId}
                 className="rounded-2xl border border-border bg-card p-4"
@@ -246,6 +252,13 @@ function ReviewPage() {
                   </a>
                 )}
 
+                {t.status === "confirmed" ? (
+                  <p className="mt-4 flex items-center justify-center gap-1.5 rounded-xl bg-accent px-4 py-2.5 text-sm font-medium text-accent-foreground">
+                    <BadgeCheck className="h-4 w-4" /> مؤكد
+                    {t.notes ? ` — ${t.notes}` : ""}
+                  </p>
+                ) : (
+                <>
                 {load.isAcc1 && load.master && (
                   <AccountantEdits
                     t={t}
@@ -267,6 +280,8 @@ function ReviewPage() {
                   )}
                   تأكيد
                 </button>
+                </>
+                )}
               </div>
             ))}
           </div>

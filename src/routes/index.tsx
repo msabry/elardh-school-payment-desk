@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { findMismatches } from "@/lib/filters";
 import { toast } from "sonner";
 import { Loader2, LogOut, Paperclip, Search, Wallet } from "lucide-react";
 
@@ -8,6 +9,7 @@ import { lovable } from "@/integrations/lovable";
 import {
   getMyRole,
   getMasterData,
+  analyzeSms,
   submitCollection,
   type MasterData,
 } from "@/lib/collections.functions";
@@ -176,6 +178,12 @@ function Index() {
               className="mb-4 flex items-center justify-center gap-2 rounded-xl border border-input bg-card px-4 py-2.5 text-sm font-medium text-foreground"
             >
               تحصيلات بانتظار المراجعة
+            </Link>
+            <Link
+              to="/transactions"
+              className="mb-4 flex items-center justify-center gap-2 rounded-xl border border-input bg-card px-4 py-2.5 text-sm font-medium text-foreground"
+            >
+              كل التحصيلات
             </Link>
             <Link
               to="/payments"
@@ -499,6 +507,30 @@ function Accountant2Form({ master }: { master: MasterData }) {
   const [wallet, setWallet] = useState("");
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [check, setCheck] = useState<{
+    amount: number | null;
+    wallet: string | null;
+    transferReference: string | null;
+  } | null>(null);
+  const mismatches = check
+    ? findMismatches(check, { amount: Number(amount) || 0, wallet })
+    : [];
+
+  async function runCheck() {
+    if (!sms.trim()) {
+      toast.error("الصق نص رسالة التأكيد أولاً");
+      return;
+    }
+    setChecking(true);
+    try {
+      setCheck(await analyzeSms({ data: { smsText: sms } }));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "تعذر تحليل الرسالة");
+    } finally {
+      setChecking(false);
+    }
+  }
 
   if (done) {
     return (
@@ -509,6 +541,7 @@ function Accountant2Form({ master }: { master: MasterData }) {
           setAmount("");
           setSms("");
           setWallet("");
+          setCheck(null);
           setDone(null);
         }}
       />
@@ -578,12 +611,57 @@ function Accountant2Form({ master }: { master: MasterData }) {
         <label className={labelCls}>رسالة تأكيد التحويل</label>
         <textarea
           value={sms}
-          onChange={(e) => setSms(e.target.value)}
+          onChange={(e) => {
+            setSms(e.target.value);
+            setCheck(null);
+          }}
           placeholder="الصق نص رسالة التأكيد كاملة هنا…"
           rows={5}
           className={inputCls + " resize-none"}
         />
       </div>
+
+      <button
+        type="button"
+        onClick={runCheck}
+        disabled={checking}
+        className="flex w-full items-center justify-center gap-2 rounded-xl border border-primary px-4 py-2.5 text-sm font-medium text-primary disabled:opacity-60"
+      >
+        {checking && <Loader2 className="h-4 w-4 animate-spin" />}
+        مطابقة الرسالة بالذكاء الاصطناعي
+      </button>
+
+      {check && (
+        <div
+          className={
+            "rounded-xl border p-3 text-xs " +
+            (mismatches.length ? "border-destructive bg-destructive/10" : "border-border bg-card")
+          }
+        >
+          <p className="mb-1.5 font-semibold">ما قرأناه من الرسالة:</p>
+          <p>المبلغ: {check.amount ?? "غير موجود"}</p>
+          <p>المحفظة: {WALLETS.find((w) => w.value === check.wallet)?.label ?? "غير محددة"}</p>
+          <p>مرجع التحويل: {check.transferReference ?? "غير موجود"}</p>
+          {mismatches.length === 0 ? (
+            <p className="mt-2 font-medium text-primary">مطابقة للبيانات المدخلة ✓</p>
+          ) : (
+            <ul className="mt-2 space-y-1 font-medium text-destructive">
+              {mismatches.map((m) => (
+                <li key={m.field}>
+                  {m.field === "amount"
+                    ? `المبلغ مختلف: الرسالة ${m.sms} والمُدخل ${m.entered}`
+                    : `المحفظة مختلفة: الرسالة ${WALLETS.find((w) => w.value === m.sms)?.label} والمُختار ${WALLETS.find((w) => w.value === m.entered)?.label}`}
+                </li>
+              ))}
+            </ul>
+          )}
+          {check.wallet && !wallet && (
+            <button type="button" onClick={() => setWallet(check.wallet!)} className="mt-2 underline">
+              استخدم المحفظة من الرسالة
+            </button>
+          )}
+        </div>
+      )}
 
       <button
         onClick={submit}

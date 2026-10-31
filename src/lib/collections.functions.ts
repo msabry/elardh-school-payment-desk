@@ -125,6 +125,7 @@ export type ReviewTransaction = {
   customerName: string;
   wallet: string;
   notes: string;
+  status: string;
   kidName: string;
   programName: string;
   amount: string;
@@ -145,7 +146,6 @@ export const getTransactionsForReview = createServerFn({ method: "GET" })
     const rows = await gw.getValues("Transactions!A2:N1000");
     return rows
       .filter((r) => r[0] && (r[10] ?? "").trim().toLowerCase() !== myEmail)
-      .filter((r) => ((r[12] ?? "") || "pending").trim().toLowerCase() !== "confirmed")
       .map((r) => ({
         transactionId: r[0]!,
         date: r[1] ?? "",
@@ -153,6 +153,7 @@ export const getTransactionsForReview = createServerFn({ method: "GET" })
         customerName: r[3] ?? "",
         wallet: r[11] ?? "",
         notes: r[13] ?? "",
+        status: ((r[12] ?? "") || "pending").trim().toLowerCase(),
         kidName: r[4] ?? "",
         programName: r[5] ?? "",
         amount: r[6] ?? "",
@@ -261,4 +262,52 @@ export const submitPayment = createServerFn({ method: "POST" })
     ]);
 
     return { paymentId, date, receiptFileId };
+  });
+
+export const analyzeSms = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { smsText: string }) => {
+    if (!input?.smsText?.trim()) throw new Error("SMS text is required");
+    return input;
+  })
+  .handler(async ({ data }) => {
+    const { extractSms } = await import("./sms-ai.server");
+    return extractSms(data.smsText);
+  });
+
+export type TransactionRow = {
+  transactionId: string;
+  date: string;
+  customerName: string;
+  kidName: string;
+  programName: string;
+  amount: string;
+  transferReference: string;
+  wallet: string;
+  status: string;
+  recordedBy: string;
+  notes: string;
+};
+
+export const getAllTransactions = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async (): Promise<TransactionRow[]> => {
+    const gw = await import("./google-gateway");
+    const rows = await gw.getValues("Transactions!A2:N1000");
+    return rows
+      .filter((r) => r[0])
+      .map((r) => ({
+        transactionId: r[0]!,
+        date: r[1] ?? "",
+        customerName: r[3] ?? "",
+        kidName: r[4] ?? "",
+        programName: r[5] ?? "",
+        amount: r[6] ?? "",
+        transferReference: r[7] ?? "",
+        wallet: r[11] ?? "",
+        status: ((r[12] ?? "") || "pending").trim().toLowerCase(),
+        recordedBy: r[10] ?? "",
+        notes: r[13] ?? "",
+      }))
+      .reverse();
   });
