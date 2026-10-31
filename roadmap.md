@@ -6,4 +6,4 @@
 - [x] Review page (/review): other accountant's pending submissions, confirm -> "confirmed" (verified end-to-end)
 - [x] Full Arabic RTL translation of the UI (verified)
 - [x] Payments page (/payments) + home link
-- [ ] Flip sheet role back to accountant2 when user is done previewing Accountant 1
+- [x] Flip sheet role back to accountant2 (done 2026-10-31)
