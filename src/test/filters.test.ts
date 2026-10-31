@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyFilters, emptyFilters, findMismatches, isSupplierPayment } from "@/lib/filters";
+import { applyFilters, emptyFilters, findMismatches, isSupplierPayment, isUsableMasterRow } from "@/lib/filters";
 
 const items = [
   { id: 1, wallet: "instapay", status: "pending", date: "2026-10-26T14:35:34.143Z" },
