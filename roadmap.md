@@ -8,4 +8,4 @@
 - [x] Payments page (/payments) + home link
 - [x] Flip sheet role back to accountant2 (done 2026-10-31)
 - [x] Transactions column C = customer_supplier_id (customer id or supplier id) handled in app
-- [ ] Home page: separate the 3 action buttons from the entry fields — divider, visually distinct buttons, boxed field section with its own title
+- [x] Home page: buttons grouped in their own card, dashed separator, titled grey field panel (verified in phone screenshots)
