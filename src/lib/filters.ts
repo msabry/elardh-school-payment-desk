@@ -36,3 +36,10 @@ export function findMismatches(
   }
   return out;
 }
+
+/**
+ * Column N of Transactions holds the transaction type. Supplier payments carry
+ * a supplier id in column C (customer_supplier_id) instead of a customer id.
+ */
+export const isSupplierPayment = (transactionType: string) =>
+  transactionType.trim().toLowerCase().includes("supplier");
