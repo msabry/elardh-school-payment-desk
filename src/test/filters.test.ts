@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyFilters, emptyFilters, findMismatches } from "@/lib/filters";
+import { applyFilters, emptyFilters, findMismatches, isSupplierPayment } from "@/lib/filters";
 
 const items = [
   { id: 1, wallet: "instapay", status: "pending", date: "2026-10-26T14:35:34.143Z" },
@@ -24,5 +24,16 @@ describe("SMS mismatch", () => {
   });
   it("no flags when matching", () => {
     expect(findMismatches({ amount: 2000, wallet: "instapay" }, { amount: 2000, wallet: "instapay" })).toEqual([]);
+  });
+});
+
+describe("transaction type (column N)", () => {
+  it("treats supplier payment rows as payments", () => {
+    expect(isSupplierPayment("supplier payment")).toBe(true);
+    expect(isSupplierPayment(" Supplier Payment ")).toBe(true);
+  });
+  it("treats customer collection rows as collections", () => {
+    expect(isSupplierPayment("customer collection")).toBe(false);
+    expect(isSupplierPayment("")).toBe(false);
   });
 });

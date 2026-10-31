@@ -5,7 +5,7 @@ import { ArrowRight, ListChecks, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { getAllTransactions, type TransactionRow } from "@/lib/collections.functions";
 import { TxFiltersBar } from "@/components/tx-filters";
-import { applyFilters, emptyFilters, type TxFilters } from "@/lib/filters";
+import { applyFilters, emptyFilters, isSupplierPayment, type TxFilters } from "@/lib/filters";
 
 export const Route = createFileRoute("/transactions")({
   head: () => ({
@@ -81,13 +81,13 @@ function TransactionsPage() {
                     </p>
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {t.transactionType.includes("supplier") ? "دفعة لمورّد" : "تحصيل عميل"} ·{" "}
+                    {isSupplierPayment(t.transactionType) ? "دفعة لمورّد" : "تحصيل عميل"} ·{" "}
                     {new Date(t.date).toLocaleDateString("ar-EG")} · {WALLET_LABELS[t.wallet] ?? "—"} ·{" "}
                     {t.status === "confirmed" ? "مؤكد" : "في انتظار المراجعة"}
                   </p>
                   {(t.kidName || t.programName) && (
                     <p className="mt-1 text-xs">
-                      {t.transactionType.includes("supplier")
+                      {isSupplierPayment(t.transactionType)
                         ? `بند الصرف: ${t.programName || "—"}`
                         : [t.kidName, t.programName].filter(Boolean).join(" — ")}
                     </p>

@@ -21,7 +21,7 @@ import {
 } from "@/lib/collections.functions";
 
 import { TxFiltersBar } from "@/components/tx-filters";
-import { applyFilters, emptyFilters, type TxFilters } from "@/lib/filters";
+import { applyFilters, emptyFilters, isSupplierPayment, type TxFilters } from "@/lib/filters";
 
 const WALLET_LABELS: Record<string, string> = {
   instapay: "إنستاباي",
@@ -31,7 +31,7 @@ const WALLET_LABELS: Record<string, string> = {
 type Edits = { kidName: string; programName: string; notes: string };
 
 /** Column C holds a supplier id for these rows, not a customer id. */
-const isPayment = (t: ReviewTransaction) => t.transactionType.includes("supplier");
+const isPayment = (t: ReviewTransaction) => isSupplierPayment(t.transactionType);
 
 export const Route = createFileRoute("/review")({
   head: () => ({
