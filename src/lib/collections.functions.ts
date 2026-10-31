@@ -169,7 +169,8 @@ export const confirmTransaction = createServerFn({ method: "POST" })
     (input: { transactionId: string; kidName?: string; programName?: string; notes?: string }) => {
     if (!input?.transactionId) throw new Error("Transaction is required");
     return input;
-  })
+  },
+  )
   .handler(async ({ data, context }) => {
     const myEmail = (context.claims.email as string | undefined)?.toLowerCase() ?? "";
     const gw = await import("./google-gateway");
