@@ -13,9 +13,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import {
   confirmTransaction,
+  getMasterData,
+  getMyRole,
   getTransactionsForReview,
+  type MasterData,
   type ReviewTransaction,
 } from "@/lib/collections.functions";
+
+const WALLET_LABELS: Record<string, string> = {
+  instapay: "إنستاباي",
+  vodaphone: "فودافون كاش",
+  cash: "نقدي",
+};
+type Edits = { kidName: string; programName: string; notes: string };
 
 export const Route = createFileRoute("/review")({
   head: () => ({
@@ -40,7 +50,7 @@ export const Route = createFileRoute("/review")({
 type Load =
   | { state: "loading" }
   | { state: "signedOut" }
-  | { state: "ready"; items: ReviewTransaction[] };
+  | { state: "ready"; items: ReviewTransaction[]; isAcc1: boolean; master: MasterData | null };
 
 function ReviewPage() {
   const [load, setLoad] = useState<Load>({ state: "loading" });
@@ -54,8 +64,10 @@ function ReviewPage() {
       return;
     }
     try {
-      const items = await getTransactionsForReview();
-      setLoad({ state: "ready", items });
+      const [items, role] = await Promise.all([getTransactionsForReview(), getMyRole()]);
+      const isAcc1 = role.authorized && role.role === "accountant1";
+      const master = isAcc1 ? await getMasterData() : null;
+      setLoad({ state: "ready", items, isAcc1, master });
     } catch (e) {
       console.error(e);
       setLoad({ state: "signedOut" });
@@ -88,15 +100,29 @@ function ReviewPage() {
     }
   }
 
+  const [edits, setEdits] = useState<Record<string, Edits>>({});
+  function editOf(t: ReviewTransaction): Edits {
+    return edits[t.transactionId] ?? { kidName: t.kidName, programName: t.programName, notes: t.notes };
+  }
+  function setEdit(t: ReviewTransaction, patch: Partial<Edits>) {
+    setEdits((p) => ({ ...p, [t.transactionId]: { ...editOf(t), ...patch } }));
+  }
+
   async function confirm(t: ReviewTransaction) {
     setConfirming(t.transactionId);
     try {
-      await confirmTransaction({ data: { transactionId: t.transactionId } });
+      const isAcc1 = load.state === "ready" && load.isAcc1;
+      const e = editOf(t);
+      await confirmTransaction({
+        data: isAcc1
+          ? { transactionId: t.transactionId, kidName: e.kidName, programName: e.programName, notes: e.notes.trim() }
+          : { transactionId: t.transactionId },
+      });
       toast.success("تم تأكيد التحصيل");
       setLoad((prev) =>
         prev.state === "ready"
           ? {
-              state: "ready",
+              ...prev,
               items: prev.items.filter(
                 (x) => x.transactionId !== t.transactionId,
               ),
@@ -184,11 +210,14 @@ function ReviewPage() {
                 </div>
 
                 <dl className="mt-3 space-y-1.5 text-xs">
-                  {t.kidName && (
+                  {!load.isAcc1 && t.kidName && (
                     <Row label="الطفل" value={t.kidName} />
                   )}
-                  {t.programName && (
+                  {!load.isAcc1 && t.programName && (
                     <Row label="الدورة" value={t.programName} />
+                  )}
+                  {t.wallet && (
+                    <Row label="المحفظة" value={WALLET_LABELS[t.wallet] ?? t.wallet} />
                   )}
                   {t.transferReference && (
                     <Row label="مرجع التحويل" value={t.transferReference} />
@@ -215,6 +244,15 @@ function ReviewPage() {
                   >
                     <FileText className="h-3.5 w-3.5" /> عرض الإيصال
                   </a>
+                )}
+
+                {load.isAcc1 && load.master && (
+                  <AccountantEdits
+                    t={t}
+                    master={load.master}
+                    value={editOf(t)}
+                    onChange={(p) => setEdit(t, p)}
+                  />
                 )}
 
                 <button
@@ -274,4 +312,61 @@ function formatDate(iso: string) {
 function formatAmount(amount: string) {
   const n = Number(amount);
   return Number.isFinite(n) ? n.toLocaleString("ar-EG") : amount;
+}
+
+const fieldCls =
+  "w-full rounded-xl border border-input bg-card px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring";
+
+function AccountantEdits({
+  t,
+  master,
+  value,
+  onChange,
+}: {
+  t: ReviewTransaction;
+  master: MasterData;
+  value: Edits;
+  onChange: (p: Partial<Edits>) => void;
+}) {
+  const kids = master.kids.filter((k) => k.customerId === t.customerId);
+  const kidNames = kids.map((k) => k.name);
+  if (value.kidName && !kidNames.includes(value.kidName)) kidNames.unshift(value.kidName);
+  const kid = kids.find((k) => k.name === value.kidName);
+  const enrolled = kid ? master.enrollments.filter((e) => e.kidId === kid.id).map((e) => e.programId) : [];
+  const progList = master.programs.filter((p) => enrolled.includes(p.id));
+  const progNames = (progList.length ? progList : master.programs).map((p) => p.name);
+  if (value.programName && !progNames.includes(value.programName)) progNames.unshift(value.programName);
+
+  return (
+    <div className="mt-3 space-y-2.5 border-t border-border pt-3">
+      <div>
+        <label className="mb-1 block text-xs font-medium">الطفل</label>
+        <select value={value.kidName} onChange={(e) => onChange({ kidName: e.target.value })} className={fieldCls}>
+          <option value="">اختر الطفل…</option>
+          {kidNames.map((n) => (
+            <option key={n} value={n}>{n}</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label className="mb-1 block text-xs font-medium">البرنامج / الدورة</label>
+        <select value={value.programName} onChange={(e) => onChange({ programName: e.target.value })} className={fieldCls}>
+          <option value="">اختر الدورة…</option>
+          {progNames.map((n) => (
+            <option key={n} value={n}>{n}</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label className="mb-1 block text-xs font-medium">ملاحظات</label>
+        <textarea
+          value={value.notes}
+          onChange={(e) => onChange({ notes: e.target.value })}
+          rows={2}
+          placeholder="أضف ملاحظة (اختياري)…"
+          className={fieldCls + " resize-none"}
+        />
+      </div>
+    </div>
+  );
 }

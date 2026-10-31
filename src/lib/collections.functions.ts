@@ -60,6 +60,7 @@ type SubmitInput = {
   amount: number;
   transferReference?: string;
   smsText?: string;
+  wallet?: string;
   receipt?: { name: string; mimeType: string; dataBase64: string };
 };
 
@@ -68,6 +69,9 @@ export const submitCollection = createServerFn({ method: "POST" })
   .inputValidator((input: SubmitInput) => {
     if (!input.customerId || !input.customerName) throw new Error("Customer is required");
     if (!input.amount || input.amount <= 0) throw new Error("Amount must be greater than zero");
+    if (!input.wallet || !["instapay", "vodaphone", "cash"].includes(input.wallet)) {
+      throw new Error("Wallet is required");
+    }
     if (input.receipt && input.receipt.dataBase64.length > 7_000_000) {
       throw new Error("Receipt file is too large (max ~5 MB)");
     }
@@ -93,9 +97,9 @@ export const submitCollection = createServerFn({ method: "POST" })
     const date = new Date().toISOString();
     const recordedBy = (context.claims.email as string | undefined) ?? context.userId;
 
-    // Column L holds the review status; new collections start as "pending"
-    // until the other accountant confirms them on the review page.
-    await gw.appendRow("Transactions!A1:L1", [
+    // Column L = wallet, M = review status ("pending" until the other
+    // accountant confirms), N = reviewer notes.
+    await gw.appendRow("Transactions!A1:N1", [
       transactionId,
       date,
       data.customerId,
@@ -107,6 +111,7 @@ export const submitCollection = createServerFn({ method: "POST" })
       data.smsText ?? "",
       receiptFileId,
       recordedBy,
+      data.wallet ?? "",
       "pending",
     ]);
 
@@ -116,7 +121,10 @@ export const submitCollection = createServerFn({ method: "POST" })
 export type ReviewTransaction = {
   transactionId: string;
   date: string;
+  customerId: string;
   customerName: string;
+  wallet: string;
+  notes: string;
   kidName: string;
   programName: string;
   amount: string;
@@ -133,15 +141,18 @@ export const getTransactionsForReview = createServerFn({ method: "GET" })
     const gw = await import("./google-gateway");
     // Columns: A transaction_id, B date, C customer_id, D customer_name,
     // E kid_name, F program_name, G amount, H transfer_reference, I sms_text,
-    // J receipt_file_id, K recorded_by, L status.
-    const rows = await gw.getValues("Transactions!A2:L1000");
+    // J receipt_file_id, K recorded_by, L wallet, M status, N notes.
+    const rows = await gw.getValues("Transactions!A2:N1000");
     return rows
       .filter((r) => r[0] && (r[10] ?? "").trim().toLowerCase() !== myEmail)
-      .filter((r) => ((r[11] ?? "") || "pending").trim().toLowerCase() !== "confirmed")
+      .filter((r) => ((r[12] ?? "") || "pending").trim().toLowerCase() !== "confirmed")
       .map((r) => ({
         transactionId: r[0]!,
         date: r[1] ?? "",
+        customerId: r[2] ?? "",
         customerName: r[3] ?? "",
+        wallet: r[11] ?? "",
+        notes: r[13] ?? "",
         kidName: r[4] ?? "",
         programName: r[5] ?? "",
         amount: r[6] ?? "",
@@ -154,21 +165,31 @@ export const getTransactionsForReview = createServerFn({ method: "GET" })
 
 export const confirmTransaction = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { transactionId: string }) => {
+  .inputValidator(
+    (input: { transactionId: string; kidName?: string; programName?: string; notes?: string }) => {
     if (!input?.transactionId) throw new Error("Transaction is required");
     return input;
-  })
+  },
+  )
   .handler(async ({ data, context }) => {
     const myEmail = (context.claims.email as string | undefined)?.toLowerCase() ?? "";
     const gw = await import("./google-gateway");
-    const rows = await gw.getValues("Transactions!A2:L1000");
+    const rows = await gw.getValues("Transactions!A2:N1000");
     const idx = rows.findIndex((r) => r[0] === data.transactionId);
     if (idx < 0) throw new Error("Transaction not found");
     const recordedBy = (rows[idx]?.[10] ?? "").trim().toLowerCase();
     if (recordedBy === myEmail) {
       throw new Error("You can only review transactions submitted by the other accountant");
     }
-    await gw.updateValues(`Transactions!L${idx + 2}`, [["confirmed"]]);
+    const row = idx + 2;
+    if (data.kidName !== undefined || data.programName !== undefined) {
+      await gw.updateValues(`Transactions!E${row}:F${row}`, [
+        [data.kidName ?? rows[idx]?.[4] ?? "", data.programName ?? rows[idx]?.[5] ?? ""],
+      ]);
+    }
+    await gw.updateValues(`Transactions!M${row}:N${row}`, [
+      ["confirmed", data.notes ?? rows[idx]?.[13] ?? ""],
+    ]);
     return { ok: true as const };
   });
 
