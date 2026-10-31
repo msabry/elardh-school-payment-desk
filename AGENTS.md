@@ -8,3 +8,4 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+- AI SMS parsing lives server-only in src/lib/sms-ai.server.ts (Lovable AI Gateway, Responses API, structured output); pure filter/mismatch logic in src/lib/filters.ts so it is unit-tested.
