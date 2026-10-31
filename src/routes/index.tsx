@@ -9,6 +9,7 @@ import { lovable } from "@/integrations/lovable";
 import {
   getMyRole,
   getMasterData,
+  getTransactionsForReview,
   analyzeSms,
   submitCollection,
   type MasterData,
@@ -44,6 +45,7 @@ type Role =
 function Index() {
   const [role, setRole] = useState<Role>({ state: "loading" });
   const [master, setMaster] = useState<MasterData | null>(null);
+  const [pendingCount, setPendingCount] = useState<number | null>(null);
   const [signingIn, setSigningIn] = useState(false);
 
   useEffect(() => {
@@ -61,7 +63,10 @@ function Index() {
           setRole({ state: "unauthorized", email: r.email });
         } else {
           setRole({ state: "ready", name: r.name, role: r.role, email: r.email });
-          setMaster(await getMasterData());
+          const [m, review] = await Promise.all([getMasterData(), getTransactionsForReview()]);
+          if (cancelled) return;
+          setMaster(m);
+          setPendingCount(review.filter((t) => t.status === "pending").length);
         }
       } catch (e) {
         console.error(e);
@@ -174,12 +179,17 @@ function Index() {
               .
             </p>
 
-            <div className="rounded-2xl border border-border bg-card p-3">
+            <div className="rounded-2xl border-2 border-primary/25 bg-card p-3 shadow-sm">
               <p className="mb-2 text-xs font-medium text-muted-foreground">
                 السجلات والمراجعة
               </p>
               <div className="grid grid-cols-3 gap-2">
-                <Link to="/review" className={tileCls}>
+                <Link to="/review" className={`${tileCls} relative`}>
+                  {pendingCount !== null && pendingCount > 0 && (
+                    <span className="absolute -top-2 left-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground shadow">
+                      {pendingCount}
+                    </span>
+                  )}
                   <BadgeCheck className="h-5 w-5 text-primary" />
                   بانتظار المراجعة
                 </Link>
@@ -194,9 +204,13 @@ function Index() {
               </div>
             </div>
 
-            <div className="my-6 border-t border-dashed border-border" />
+            <div className="my-8 flex items-center gap-3">
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-xs font-medium text-muted-foreground">إدخال جديد</span>
+              <div className="h-px flex-1 bg-border" />
+            </div>
 
-            <section className="rounded-2xl border border-border bg-muted p-4">
+            <section className="rounded-2xl border border-border bg-muted p-4 shadow-inner">
               <h2 className="mb-4 text-sm font-semibold text-foreground">
                 تسجيل تحصيل جديد
               </h2>
