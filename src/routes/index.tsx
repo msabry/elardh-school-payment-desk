@@ -243,7 +243,7 @@ function CustomerPicker({
   return (
     <div ref={boxRef} className="relative">
       <label className="mb-1 block text-sm font-medium">العميل</label>
-      <div className="flex items-center gap-2 rounded-xl border border-input bg-card px-3">
+      <div className="flex items-center gap-2 rounded-xl border border-input bg-background px-3">
         <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
         <input
           value={query}
@@ -287,7 +287,7 @@ function CustomerPicker({
 }
 
 const inputCls =
-  "w-full rounded-xl border border-input bg-card px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-ring";
+  "w-full rounded-xl border border-input bg-background px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-ring";
 const labelCls = "mb-1 block text-sm font-medium";
 const tileCls =
   "flex flex-col items-center gap-1.5 rounded-xl border border-input bg-background px-1.5 py-3 text-center text-[11px] font-medium leading-tight text-foreground transition-colors hover:border-primary hover:bg-accent";
@@ -488,7 +488,7 @@ function Accountant1Form({ master }: { master: MasterData }) {
 
       <div>
         <label className={labelCls}>الإيصال (اختياري)</label>
-        <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-input bg-card px-3 py-3 text-sm text-muted-foreground">
+        <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-input bg-background px-3 py-3 text-sm text-muted-foreground">
           <Paperclip className="h-4 w-4" />
           {receipt ? receipt.name : "أرفق إيصال التحويل…"}
           <input
@@ -647,7 +647,7 @@ function Accountant2Form({ master }: { master: MasterData }) {
         <div
           className={
             "rounded-xl border p-3 text-xs " +
-            (mismatches.length ? "border-destructive bg-destructive/10" : "border-border bg-card")
+            (mismatches.length ? "border-destructive bg-destructive/10" : "border-border bg-background")
           }
         >
           <p className="mb-1.5 font-semibold">ما قرأناه من الرسالة:</p>
@@ -707,7 +707,7 @@ function WalletPicker({ value, onChange }: { value: string; onChange: (v: string
               "rounded-xl border px-2 py-2.5 text-sm font-medium " +
               (value === w.value
                 ? "border-primary bg-primary text-primary-foreground"
-                : "border-input bg-card text-foreground")
+                : "border-input bg-background text-foreground")
             }
           >
             {w.label}
