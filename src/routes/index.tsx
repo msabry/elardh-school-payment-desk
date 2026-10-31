@@ -177,6 +177,12 @@ function Index() {
             >
               تحصيلات بانتظار المراجعة
             </Link>
+            <Link
+              to="/payments"
+              className="mb-4 flex items-center justify-center gap-2 rounded-xl border border-input bg-card px-4 py-2.5 text-sm font-medium text-foreground"
+            >
+              تسجيل دفعة لمورّد
+            </Link>
             {role.role === "accountant2" ? (
               <Accountant2Form master={master} />
             ) : (
