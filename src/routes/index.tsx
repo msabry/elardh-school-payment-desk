@@ -295,6 +295,7 @@ function Accountant1Form({ master }: { master: MasterData }) {
   const [programId, setProgramId] = useState("");
   const [amount, setAmount] = useState("");
   const [reference, setReference] = useState("");
+  const [wallet, setWallet] = useState("");
   const [receipt, setReceipt] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<string | null>(null);
@@ -319,6 +320,7 @@ function Accountant1Form({ master }: { master: MasterData }) {
     setProgramId("");
     setAmount("");
     setReference("");
+    setWallet("");
     setReceipt(null);
     setDone(null);
   }
@@ -339,6 +341,10 @@ function Accountant1Form({ master }: { master: MasterData }) {
     const amt = Number(amount);
     if (!amt || amt <= 0) {
       toast.error("أدخل مبلغاً صحيحاً");
+      return;
+    }
+    if (!wallet) {
+      toast.error("اختر المحفظة");
       return;
     }
     if (!reference.trim()) {
@@ -372,6 +378,7 @@ function Accountant1Form({ master }: { master: MasterData }) {
           programName: program?.name ?? "",
           amount: amt,
           transferReference: reference.trim(),
+          wallet,
           ...(receiptPayload ? { receipt: receiptPayload } : {}),
         },
       });
@@ -447,6 +454,8 @@ function Accountant1Form({ master }: { master: MasterData }) {
         />
       </div>
 
+      <WalletPicker value={wallet} onChange={setWallet} />
+
       <div>
         <label className={labelCls}>مرجع التحويل</label>
         <input
@@ -487,6 +496,7 @@ function Accountant2Form({ master }: { master: MasterData }) {
   const [customer, setCustomer] = useState<{ id: string; name: string } | null>(null);
   const [amount, setAmount] = useState("");
   const [sms, setSms] = useState("");
+  const [wallet, setWallet] = useState("");
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<string | null>(null);
 
@@ -498,6 +508,7 @@ function Accountant2Form({ master }: { master: MasterData }) {
           setCustomer(null);
           setAmount("");
           setSms("");
+          setWallet("");
           setDone(null);
         }}
       />
@@ -514,6 +525,10 @@ function Accountant2Form({ master }: { master: MasterData }) {
       toast.error("أدخل مبلغاً صحيحاً");
       return;
     }
+    if (!wallet) {
+      toast.error("اختر المحفظة");
+      return;
+    }
     if (!sms.trim()) {
       toast.error("الصق نص رسالة التأكيد");
       return;
@@ -527,6 +542,7 @@ function Accountant2Form({ master }: { master: MasterData }) {
           customerName: customer.name,
           amount: amt,
           smsText: sms.trim(),
+          wallet,
         },
       });
       setDone(result.transactionId);
@@ -556,6 +572,8 @@ function Accountant2Form({ master }: { master: MasterData }) {
         />
       </div>
 
+      <WalletPicker value={wallet} onChange={setWallet} />
+
       <div>
         <label className={labelCls}>رسالة تأكيد التحويل</label>
         <textarea
@@ -575,6 +593,37 @@ function Accountant2Form({ master }: { master: MasterData }) {
         {busy && <Loader2 className="h-4 w-4 animate-spin" />}
         حفظ التحصيل
       </button>
+    </div>
+  );
+}
+
+const WALLETS = [
+  { value: "instapay", label: "إنستاباي" },
+  { value: "vodaphone", label: "فودافون كاش" },
+  { value: "cash", label: "نقدي" },
+];
+
+function WalletPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <div>
+      <label className={labelCls}>المحفظة</label>
+      <div className="grid grid-cols-3 gap-2">
+        {WALLETS.map((w) => (
+          <button
+            key={w.value}
+            type="button"
+            onClick={() => onChange(w.value)}
+            className={
+              "rounded-xl border px-2 py-2.5 text-sm font-medium " +
+              (value === w.value
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-input bg-card text-foreground")
+            }
+          >
+            {w.label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
