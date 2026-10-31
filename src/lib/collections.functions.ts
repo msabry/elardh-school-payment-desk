@@ -97,9 +97,8 @@ export const submitCollection = createServerFn({ method: "POST" })
     const date = new Date().toISOString();
     const recordedBy = (context.claims.email as string | undefined) ?? context.userId;
 
-    // Column L = wallet, M = review status ("pending" until the other
-    // accountant confirms), N = reviewer notes.
-    await gw.appendRow("Transactions!A1:N1", [
+    // Column L = wallet, M = review status, N = transaction_type, O = notes.
+    await gw.appendRow("Transactions!A1:O1", [
       transactionId,
       date,
       data.customerId,
@@ -113,6 +112,8 @@ export const submitCollection = createServerFn({ method: "POST" })
       recordedBy,
       data.wallet ?? "",
       "pending",
+      "customer collection",
+      "",
     ]);
 
     return { transactionId, date, receiptFileId };
