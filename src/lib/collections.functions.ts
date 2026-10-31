@@ -111,7 +111,7 @@ export const submitCollection = createServerFn({ method: "POST" })
       data.smsText ?? "",
       receiptFileId,
       recordedBy,
-      data.wallet,
+      data.wallet ?? "",
       "pending",
     ]);
 
