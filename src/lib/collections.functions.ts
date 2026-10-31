@@ -1,5 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { isUsableMasterRow } from "./filters";
+
 
 export type MasterData = {
   customers: { id: string; name: string; phone: string }[];
@@ -38,11 +40,12 @@ export const getMasterData = createServerFn({ method: "GET" })
     ]);
     return {
       customers: customers
-        .filter((r) => r[0])
-        .map((r) => ({ id: r[0]!, name: r[1] ?? "", phone: r[2] ?? "" })),
+        .filter((r) => isUsableMasterRow(r, 1))
+        .map((r) => ({ id: r[0]!, name: r[1]!, phone: r[2] ?? "" })),
       kids: kids
-        .filter((r) => r[0])
-        .map((r) => ({ id: r[0]!, customerId: r[1] ?? "", name: r[2] ?? "" })),
+        .filter((r) => isUsableMasterRow(r, 2))
+        .map((r) => ({ id: r[0]!, customerId: r[1] ?? "", name: r[2]! })),
+
       // Programs rows may hold only the name (column A) with no separate id;
       // fall back to the id column text as the display name.
       programs: programs.filter((r) => r[0]).map((r) => ({ id: r[0]!, name: (r[1] ?? "").trim() || r[0]! })),

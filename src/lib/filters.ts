@@ -43,3 +43,12 @@ export function findMismatches(
  */
 export const isSupplierPayment = (transactionType: string) =>
   transactionType.trim().toLowerCase().includes("supplier");
+
+/**
+ * Master-data rows (Customers, Kids) are only offered in the app when they carry
+ * both an id in column A and a display name, so half-filled rows left while
+ * re-numbering ids never show up as blank choices.
+ */
+export const isUsableMasterRow = (row: (string | undefined)[], nameIndex: number) =>
+  Boolean(row[0]?.trim() && (row[nameIndex] ?? "").trim());
+
