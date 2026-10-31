@@ -9,6 +9,7 @@ import { lovable } from "@/integrations/lovable";
 import {
   getMyRole,
   getMasterData,
+  getTransactionsForReview,
   analyzeSms,
   submitCollection,
   type MasterData,
@@ -44,6 +45,7 @@ type Role =
 function Index() {
   const [role, setRole] = useState<Role>({ state: "loading" });
   const [master, setMaster] = useState<MasterData | null>(null);
+  const [pendingCount, setPendingCount] = useState<number | null>(null);
   const [signingIn, setSigningIn] = useState(false);
 
   useEffect(() => {
