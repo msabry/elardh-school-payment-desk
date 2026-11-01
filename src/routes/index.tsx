@@ -649,7 +649,7 @@ function Accountant2Form({ master }: { master: MasterData }) {
         type="button"
         onClick={runCheck}
         disabled={checking}
-        className="flex w-full items-center justify-center gap-2 rounded-xl border border-primary px-4 py-2.5 text-sm font-medium text-primary disabled:opacity-60"
+        className="hidden"
       >
         {checking && <Loader2 className="h-4 w-4 animate-spin" />}
         مطابقة الرسالة بالذكاء الاصطناعي
