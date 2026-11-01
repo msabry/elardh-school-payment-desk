@@ -179,14 +179,14 @@ function Index() {
               .
             </p>
 
-            <div className="rounded-2xl border-2 border-primary/25 bg-card p-3 shadow-sm">
-              <p className="mb-2 text-xs font-medium text-muted-foreground">
+            <div className="rounded-2xl bg-primary p-3 shadow-md">
+              <p className="mb-2 text-xs font-semibold text-primary-foreground/80">
                 السجلات والمراجعة
               </p>
               <div className="grid grid-cols-3 gap-2">
                 <Link to="/review" className={`${tileCls} relative`}>
                   {pendingCount !== null && pendingCount > 0 && (
-                    <span className="absolute -top-2 left-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground shadow">
+                    <span className="absolute -top-2 left-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground shadow ring-2 ring-primary">
                       {pendingCount}
                     </span>
                   )}
@@ -204,21 +204,19 @@ function Index() {
               </div>
             </div>
 
-            <div className="my-8 flex items-center gap-3">
-              <div className="h-px flex-1 bg-border" />
-              <span className="text-xs font-medium text-muted-foreground">إدخال جديد</span>
-              <div className="h-px flex-1 bg-border" />
-            </div>
+            <div className="my-8 h-1 rounded-full bg-border" />
 
-            <section className="rounded-2xl border border-border bg-muted p-4 shadow-inner">
-              <h2 className="mb-4 text-sm font-semibold text-foreground">
-                تسجيل تحصيل جديد
+            <section className="overflow-hidden rounded-2xl border-2 border-primary bg-card shadow-md">
+              <h2 className="border-b-2 border-primary bg-secondary px-4 py-3 text-base font-bold text-foreground">
+                ✍️ تسجيل تحصيل جديد
               </h2>
-              {role.role === "accountant2" ? (
-                <Accountant2Form master={master} />
-              ) : (
-                <Accountant1Form master={master} />
-              )}
+              <div className="p-4">
+                {role.role === "accountant2" ? (
+                  <Accountant2Form master={master} />
+                ) : (
+                  <Accountant1Form master={master} />
+                )}
+              </div>
             </section>
           </>
         )}
