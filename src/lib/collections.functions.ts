@@ -37,7 +37,8 @@ export const getMasterData = createServerFn({ method: "GET" })
       "Customers!A2:C1000",
       "Kids!A2:C1000",
       "Programs!A2:B1000",
-      "Enrollments!A2:B1000",
+      // Enrollments: A enrollment_id (kidId_programId), B kid_id, C program_id, D kid_name.
+      "Enrollments!A2:D1000",
     ]);
     return {
       customers: customers
@@ -51,8 +52,8 @@ export const getMasterData = createServerFn({ method: "GET" })
       // fall back to the id column text as the display name.
       programs: programs.filter((r) => r[0]).map((r) => ({ id: r[0]!, name: (r[1] ?? "").trim() || r[0]! })),
       enrollments: enrollments
-        .filter((r) => r[0])
-        .map((r) => ({ kidId: r[0]!, programId: r[1] ?? "" })),
+        .filter((r) => (r[1] ?? "").trim())
+        .map((r) => ({ kidId: r[1]!.trim(), programId: (r[2] ?? "").trim() })),
     };
   });
 
