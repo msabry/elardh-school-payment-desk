@@ -52,3 +52,39 @@ export const isSupplierPayment = (transactionType: string) =>
 export const isUsableMasterRow = (row: (string | undefined)[], nameIndex: number) =>
   Boolean(row[0]?.trim() && (row[nameIndex] ?? "").trim());
 
+/** One child's subscription to one course, keyed by the Enrollments primary key. */
+export type Enrollment = { id: string; kidId: string; programId: string };
+
+/**
+ * enrollment_id is composed as `${kid_id}_${program_id}`. Program ids never
+ * contain an underscore, so the id splits at the last one.
+ */
+export function parseEnrollmentId(id: string): { kidId: string; programId: string } | null {
+  const trimmed = id.trim();
+  const at = trimmed.lastIndexOf("_");
+  if (at <= 0 || at === trimmed.length - 1) return null;
+  const kidId = trimmed.slice(0, at);
+  const programId = trimmed.slice(at + 1);
+  return kidId && programId ? { kidId, programId } : null;
+}
+
+/**
+ * Turn Enrollments rows into enrollments keyed by their primary key: a row with
+ * no enrollment_id is not a record, a repeated id is the same record listed
+ * twice, and kid/course fall back to the id when their columns are blank.
+ */
+export function normalizeEnrollments(rows: (string | undefined)[][]): Enrollment[] {
+  const byId = new Map<string, Enrollment>();
+  for (const row of rows) {
+    const id = (row[0] ?? "").trim();
+    if (!id) continue;
+    const parsed = parseEnrollmentId(id);
+    const kidId = (row[1] ?? "").trim() || parsed?.kidId || "";
+    const programId = (row[2] ?? "").trim() || parsed?.programId || "";
+    if (!kidId || !programId) continue;
+    if (!byId.has(id)) byId.set(id, { id, kidId, programId });
+  }
+  return [...byId.values()];
+}
+
+

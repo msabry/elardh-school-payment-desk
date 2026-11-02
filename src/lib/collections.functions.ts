@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { isUsableMasterRow } from "./filters";
+import { isUsableMasterRow, normalizeEnrollments, type Enrollment } from "./filters";
 
 
 
