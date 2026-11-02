@@ -52,8 +52,8 @@ export const getMasterData = createServerFn({ method: "GET" })
       // fall back to the id column text as the display name.
       programs: programs.filter((r) => r[0]).map((r) => ({ id: r[0]!, name: (r[1] ?? "").trim() || r[0]! })),
       enrollments: enrollments
-        .filter((r) => r[0])
-        .map((r) => ({ kidId: r[0]!, programId: r[1] ?? "" })),
+        .filter((r) => (r[1] ?? "").trim())
+        .map((r) => ({ kidId: r[1]!.trim(), programId: (r[2] ?? "").trim() })),
     };
   });
 
