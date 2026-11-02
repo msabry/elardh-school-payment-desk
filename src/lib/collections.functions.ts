@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { isUsableMasterRow } from "./filters";
+import { isUsableMasterRow, normalizeEnrollments, type Enrollment } from "./filters";
 
 
 
@@ -8,7 +8,7 @@ export type MasterData = {
   customers: { id: string; name: string; phone: string }[];
   kids: { id: string; customerId: string; name: string }[];
   programs: { id: string; name: string }[];
-  enrollments: { kidId: string; programId: string }[];
+  enrollments: Enrollment[];
 };
 
 export const getMyRole = createServerFn({ method: "GET" })
@@ -37,8 +37,9 @@ export const getMasterData = createServerFn({ method: "GET" })
       "Customers!A2:C1000",
       "Kids!A2:C1000",
       "Programs!A2:B1000",
-      // Enrollments: A enrollment_id (kidId_programId), B kid_id, C program_id, D kid_name.
-      "Enrollments!A2:D1000",
+      // Enrollments: A enrollment_id (kidId_programId, the primary key),
+      // B kid_id, C program_id, D kid_name, E program_name.
+      "Enrollments!A2:E1000",
     ]);
     return {
       customers: customers
@@ -51,9 +52,7 @@ export const getMasterData = createServerFn({ method: "GET" })
 
       // fall back to the id column text as the display name.
       programs: programs.filter((r) => r[0]).map((r) => ({ id: r[0]!, name: (r[1] ?? "").trim() || r[0]! })),
-      enrollments: enrollments
-        .filter((r) => (r[1] ?? "").trim())
-        .map((r) => ({ kidId: r[1]!.trim(), programId: (r[2] ?? "").trim() })),
+      enrollments: normalizeEnrollments(enrollments),
     };
   });
 
