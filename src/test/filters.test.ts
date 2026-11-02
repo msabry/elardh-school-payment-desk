@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { applyFilters, emptyFilters, findMismatches, isSupplierPayment, isUsableMasterRow } from "@/lib/filters";
+import {
+  applyFilters,
+  emptyFilters,
+  findMismatches,
+  isSupplierPayment,
+  isUsableMasterRow,
+  normalizeEnrollments,
+  parseEnrollmentId,
+} from "@/lib/filters";
 
 const items = [
   { id: 1, wallet: "instapay", status: "pending", date: "2026-10-26T14:35:34.143Z" },
@@ -49,6 +57,37 @@ describe("master-data rows need an id and a name", () => {
   it("drops kid rows with no name in column C", () => {
     expect(isUsableMasterRow(["6", "C001", "حلا"], 2)).toBe(true);
     expect(isUsableMasterRow(["6", "C001"], 2)).toBe(false);
+  });
+});
+
+describe("enrollment_id is the Enrollments primary key", () => {
+  it("splits kid_id_program_id at the last underscore", () => {
+    expect(parseEnrollmentId("12_P008")).toEqual({ kidId: "12", programId: "P008" });
+  });
+  it("rejects ids that are not a kid/course pair", () => {
+    expect(parseEnrollmentId("P001")).toBeNull();
+    expect(parseEnrollmentId("_P001")).toBeNull();
+    expect(parseEnrollmentId("12_")).toBeNull();
+    expect(parseEnrollmentId("")).toBeNull();
+  });
+  it("keeps only rows carrying an enrollment_id", () => {
+    const rows = [
+      ["1_P001", "1", "P001"],
+      ["", "2", "P006"],
+      ["3_P008", "3", "P008"],
+    ];
+    expect(normalizeEnrollments(rows).map((e) => e.id)).toEqual(["1_P001", "3_P008"]);
+  });
+  it("drops a repeated enrollment_id", () => {
+    const rows = [
+      ["1_P001", "1", "P001"],
+      ["1_P001", "1", "P001"],
+      ["2_P006", "2", "P006"],
+    ];
+    expect(normalizeEnrollments(rows).map((e) => e.id)).toEqual(["1_P001", "2_P006"]);
+  });
+  it("recovers kid and course from the id when their columns are blank", () => {
+    expect(normalizeEnrollments([["7_P008", "", ""]])).toEqual([{ id: "7_P008", kidId: "7", programId: "P008" }]);
   });
 });
 
