@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { findMismatches } from "@/lib/filters";
+import { findMismatches, pickActiveEnrollment } from "@/lib/filters";
+import { SmartReadResult, customerSuggestions, type Extraction } from "@/components/smart-read";
 import { toast } from "sonner";
 import { BadgeCheck, Banknote, ListChecks, Loader2, LogOut, Paperclip, Search, Wallet } from "lucide-react";
 
@@ -239,6 +240,10 @@ function CustomerPicker({
   const boxRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (value) setQuery(value.name);
+  }, [value]);
+
+  useEffect(() => {
     function close(e: MouseEvent) {
       if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
     }
@@ -341,7 +346,13 @@ function Accountant1Form({ master }: { master: MasterData }) {
       .filter((e) => e.kidId === kidId)
       .map((e) => e.programId);
     const list = master.programs.filter((p) => enrolled.includes(p.id));
-    return list.length > 0 ? list : master.programs;
+    const active = pickActiveEnrollment(master.enrollments, kidId)?.programId;
+    const base = list.length > 0 ? list : master.programs;
+    return [...base].sort((a, b) => Number(b.id === active) - Number(a.id === active));
+  }, [master, kidId]);
+  useEffect(() => {
+    const active = pickActiveEnrollment(master.enrollments, kidId);
+    setProgramId(active?.programId ?? "");
   }, [master, kidId]);
 
   if (done) return <SuccessBanner transactionId={done} onReset={() => resetAll()} />;
