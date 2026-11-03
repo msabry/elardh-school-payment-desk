@@ -53,7 +53,7 @@ export const isUsableMasterRow = (row: (string | undefined)[], nameIndex: number
   Boolean(row[0]?.trim() && (row[nameIndex] ?? "").trim());
 
 /** One child's subscription to one course, keyed by the Enrollments primary key. */
-export type Enrollment = { id: string; kidId: string; programId: string };
+export type Enrollment = { id: string; kidId: string; programId: string; active: boolean };
 
 /**
  * enrollment_id is composed as `${kid_id}_${program_id}`. Program ids never
@@ -82,9 +82,67 @@ export function normalizeEnrollments(rows: (string | undefined)[][]): Enrollment
     const kidId = (row[1] ?? "").trim() || parsed?.kidId || "";
     const programId = (row[2] ?? "").trim() || parsed?.programId || "";
     if (!kidId || !programId) continue;
-    if (!byId.has(id)) byId.set(id, { id, kidId, programId });
+    const status = (row[5] ?? "").trim().toLowerCase();
+    const active = ["active", "نشط", "yes", "1", "true"].includes(status);
+    if (!byId.has(id)) byId.set(id, { id, kidId, programId, active });
   }
   return [...byId.values()];
 }
 
 
+
+/**
+ * A kid's active enrollment: the row marked active in the Enrollments status
+ * column (F); when none is marked, the last-listed enrollment for that kid.
+ */
+export function pickActiveEnrollment(enrollments: Enrollment[], kidId: string): Enrollment | null {
+  const mine = enrollments.filter((e) => e.kidId === kidId);
+  return mine.find((e) => e.active) ?? mine[mine.length - 1] ?? null;
+}
+
+/** Egyptian mobile numbers compared on their last 10 digits (drops +20 / 0 / spaces). */
+export function normalizePhone(phone: string): string {
+  const ar = "٠١٢٣٤٥٦٧٨٩";
+  const digits = phone.replace(/[٠-٩]/g, (d) => String(ar.indexOf(d))).replace(/\D/g, "");
+  return digits.length >= 10 ? digits.slice(-10) : digits;
+}
+
+function normalizeName(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/[أإآ]/g, "ا")
+    .replace(/ة/g, "ه")
+    .replace(/ى/g, "ي")
+    .replace(/[\u064B-\u0652]/g, "")
+    .replace(/\s+/g, " ");
+}
+
+/**
+ * Suggest customers for a phone/name read from an SMS or screenshot.
+ * Phone match wins; otherwise customers sharing at least two name words
+ * (or the whole name when it is a single word).
+ */
+export function suggestCustomers<T extends { id: string; name: string; phone: string }>(
+  customers: T[],
+  hints: { phones: (string | null | undefined)[]; names: (string | null | undefined)[] },
+): T[] {
+  const phones = hints.phones.map((p) => normalizePhone(p ?? "")).filter((p) => p.length >= 8);
+  if (phones.length) {
+    const byPhone = customers.filter((c) => {
+      const cp = normalizePhone(c.phone);
+      return cp.length >= 8 && phones.includes(cp);
+    });
+    if (byPhone.length) return byPhone;
+  }
+  const names = hints.names.map((n) => normalizeName(n ?? "")).filter(Boolean);
+  if (!names.length) return [];
+  return customers.filter((c) => {
+    const cw = normalizeName(c.name).split(" ");
+    return names.some((n) => {
+      const nw = n.split(" ");
+      const shared = nw.filter((w) => w.length > 1 && cw.includes(w)).length;
+      return shared >= Math.min(2, nw.length, cw.length) && shared > 0;
+    });
+  });
+}
