@@ -6,12 +6,20 @@ export type SmsExtraction = {
   amount: number | null;
   wallet: "instapay" | "vodaphone" | "cash" | null;
   transferReference: string | null;
+  senderName: string | null;
+  senderPhone: string | null;
+  receiverName: string | null;
+  receiverPhone: string | null;
 };
 
 const schema = z.object({
   amount: z.number().nullable(),
   wallet: z.enum(["instapay", "vodaphone", "cash"]).nullable(),
   transferReference: z.string().nullable(),
+  senderName: z.string().nullable(),
+  senderPhone: z.string().nullable(),
+  receiverName: z.string().nullable(),
+  receiverPhone: z.string().nullable(),
 });
 
 function runIdFetch() {
@@ -25,7 +33,32 @@ function runIdFetch() {
   };
 }
 
-export async function extractSms(smsText: string): Promise<SmsExtraction> {
+const SYSTEM =
+  "You read Egyptian bank/wallet payment confirmations (SMS text or app screenshots, Arabic or English). " +
+  "Extract: amount (number in EGP, digits only, convert Arabic numerals), " +
+  "wallet: 'instapay' if InstaPay/IPN/انستاباي, 'vodaphone' if Vodafone Cash/فودافون كاش, 'cash' only if explicitly cash, else null; " +
+  "transferReference: the reference/transaction number (رقم مرجعي / Ref); " +
+  "senderName/senderPhone: who sent the money (من / from), receiverName/receiverPhone: who received it (إلى / to). " +
+  "Phones as digits. Use null for anything not present.";
+
+export function extractSms(smsText: string): Promise<SmsExtraction> {
+  return extract([{ role: "user", content: smsText.slice(0, 4000) }]);
+}
+
+export function extractImage(dataBase64: string, mimeType: string): Promise<SmsExtraction> {
+  return extract([
+    {
+      role: "user",
+      content: [
+        { type: "text", text: "Read this payment confirmation screenshot." },
+        { type: "image", image: dataBase64, mediaType: mimeType },
+      ],
+    },
+  ]);
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function extract(messages: any[]): Promise<SmsExtraction> {
   const apiKey = process.env["LOVABLE_API_KEY"];
   if (!apiKey) throw new Error("AI is not configured");
   const provider = createOpenAI({
@@ -36,12 +69,8 @@ export async function extractSms(smsText: string): Promise<SmsExtraction> {
   });
   const result = streamText({
     model: provider.responses("openai/gpt-6-astra"),
-    system:
-      "You read Egyptian bank/wallet payment confirmation SMS messages (Arabic or English). " +
-      "Extract: amount (number in EGP, digits only, convert Arabic numerals), " +
-      "wallet: 'instapay' if InstaPay/IPN/انستاباي, 'vodaphone' if Vodafone Cash/فودافون كاش, 'cash' only if explicitly cash, else null; " +
-      "transferReference: the reference/transaction number (رقم مرجعي / Ref). Use null for anything not present.",
-    messages: [{ role: "user", content: smsText.slice(0, 4000) }],
+    system: SYSTEM,
+    messages,
     output: Output.object({ schema }),
     maxRetries: 0,
     providerOptions: {

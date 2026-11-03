@@ -6,6 +6,9 @@ import {
   isSupplierPayment,
   isUsableMasterRow,
   normalizeEnrollments,
+  normalizePhone,
+  pickActiveEnrollment,
+  suggestCustomers,
   parseEnrollmentId,
 } from "@/lib/filters";
 
@@ -87,7 +90,46 @@ describe("enrollment_id is the Enrollments primary key", () => {
     expect(normalizeEnrollments(rows).map((e) => e.id)).toEqual(["1_P001", "2_P006"]);
   });
   it("recovers kid and course from the id when their columns are blank", () => {
-    expect(normalizeEnrollments([["7_P008", "", ""]])).toEqual([{ id: "7_P008", kidId: "7", programId: "P008" }]);
+    expect(normalizeEnrollments([["7_P008", "", ""]])).toEqual([{ id: "7_P008", kidId: "7", programId: "P008", active: false }]);
   });
 });
 
+
+describe("active enrollment", () => {
+  const rows = [
+    ["1_P001", "1", "P001", "", "", ""],
+    ["1_P006", "1", "P006", "", "", "active"],
+    ["2_P001", "2", "P001"],
+    ["2_P008", "2", "P008"],
+  ];
+  const en = normalizeEnrollments(rows);
+  it("prefers the row marked active", () => {
+    expect(pickActiveEnrollment(en, "1")?.programId).toBe("P006");
+  });
+  it("falls back to the last-listed enrollment", () => {
+    expect(pickActiveEnrollment(en, "2")?.programId).toBe("P008");
+  });
+  it("is null for a kid with no enrollment", () => {
+    expect(pickActiveEnrollment(en, "9")).toBeNull();
+  });
+});
+
+describe("customer suggestion from SMS", () => {
+  const customers = [
+    { id: "C001", name: "رضوى نبيل", phone: "01001234567" },
+    { id: "C002", name: "محمد صبري", phone: "" },
+  ];
+  it("normalizes +20 and leading zero", () => {
+    expect(normalizePhone("+20 100 123 4567")).toBe("1001234567");
+    expect(normalizePhone("01001234567")).toBe("1001234567");
+  });
+  it("matches by phone first", () => {
+    expect(suggestCustomers(customers, { phones: ["+201001234567"], names: ["محمد صبري"] }).map((c) => c.id)).toEqual(["C001"]);
+  });
+  it("falls back to name, ignoring alef/taa marbuta variants", () => {
+    expect(suggestCustomers(customers, { phones: [], names: ["محمد صبري احمد"] }).map((c) => c.id)).toEqual(["C002"]);
+  });
+  it("suggests nothing for an unknown name", () => {
+    expect(suggestCustomers(customers, { phones: [], names: ["علي حسن"] })).toEqual([]);
+  });
+});

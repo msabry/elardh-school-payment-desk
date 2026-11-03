@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { findMismatches } from "@/lib/filters";
+import { findMismatches, pickActiveEnrollment } from "@/lib/filters";
+import { SmartReadResult, customerSuggestions, type Extraction } from "@/components/smart-read";
 import { toast } from "sonner";
 import { BadgeCheck, Banknote, ListChecks, Loader2, LogOut, Paperclip, Search, Wallet } from "lucide-react";
 
@@ -239,6 +240,10 @@ function CustomerPicker({
   const boxRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (value) setQuery(value.name);
+  }, [value]);
+
+  useEffect(() => {
     function close(e: MouseEvent) {
       if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
     }
@@ -328,6 +333,29 @@ function Accountant1Form({ master }: { master: MasterData }) {
   const [amount, setAmount] = useState("");
   const [reference, setReference] = useState("");
   const [wallet, setWallet] = useState("");
+  const [sms, setSms] = useState("");
+  const [reading, setReading] = useState(false);
+  const [ext, setExt] = useState<Extraction | null>(null);
+  async function readSms() {
+    if (!sms.trim()) return toast.error("الصق نص رسالة التأكيد أولاً");
+    setReading(true);
+    try {
+      const r = await analyzeSms({ data: { smsText: sms } });
+      setExt(r);
+      if (r.amount != null) setAmount(String(r.amount));
+      if (r.wallet) setWallet(r.wallet);
+      if (r.transferReference) setReference(r.transferReference);
+      const sug = customerSuggestions(master.customers, r);
+      if (sug.length === 1 && !customer) {
+        setCustomer({ id: sug[0]!.id, name: sug[0]!.name });
+        setKidId("");
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "تعذر تحليل الرسالة");
+    } finally {
+      setReading(false);
+    }
+  }
   const [receipt, setReceipt] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<string | null>(null);
@@ -341,7 +369,13 @@ function Accountant1Form({ master }: { master: MasterData }) {
       .filter((e) => e.kidId === kidId)
       .map((e) => e.programId);
     const list = master.programs.filter((p) => enrolled.includes(p.id));
-    return list.length > 0 ? list : master.programs;
+    const active = pickActiveEnrollment(master.enrollments, kidId)?.programId;
+    const base = list.length > 0 ? list : master.programs;
+    return [...base].sort((a, b) => Number(b.id === active) - Number(a.id === active));
+  }, [master, kidId]);
+  useEffect(() => {
+    const active = pickActiveEnrollment(master.enrollments, kidId);
+    setProgramId(active?.programId ?? "");
   }, [master, kidId]);
 
   if (done) return <SuccessBanner transactionId={done} onReset={() => resetAll()} />;
@@ -353,6 +387,8 @@ function Accountant1Form({ master }: { master: MasterData }) {
     setAmount("");
     setReference("");
     setWallet("");
+    setSms("");
+    setExt(null);
     setReceipt(null);
     setDone(null);
   }
@@ -411,6 +447,7 @@ function Accountant1Form({ master }: { master: MasterData }) {
           amount: amt,
           transferReference: reference.trim(),
           wallet,
+          ...(sms.trim() ? { smsText: sms.trim() } : {}),
           ...(receiptPayload ? { receipt: receiptPayload } : {}),
         },
       });
@@ -425,6 +462,39 @@ function Accountant1Form({ master }: { master: MasterData }) {
 
   return (
     <div className="space-y-4">
+      <div>
+        <label className={labelCls}>رسالة التأكيد (اختياري — للتعبئة التلقائية)</label>
+        <textarea
+          value={sms}
+          onChange={(e) => {
+            setSms(e.target.value);
+            setExt(null);
+          }}
+          placeholder="الصق رسالة التحويل هنا ليملأ التطبيق الحقول…"
+          rows={3}
+          className={inputCls + " resize-none"}
+        />
+        <button
+          type="button"
+          onClick={readSms}
+          disabled={reading || !sms.trim()}
+          className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-primary px-4 py-2.5 text-sm font-medium text-primary disabled:opacity-50"
+        >
+          {reading && <Loader2 className="h-4 w-4 animate-spin" />}
+          قراءة الرسالة وتعبئة الحقول
+        </button>
+      </div>
+      {ext && (
+        <SmartReadResult
+          ext={ext}
+          customers={master.customers}
+          selectedCustomerId={customer?.id}
+          onPickCustomer={(c) => {
+            setCustomer({ id: c.id, name: c.name });
+            setKidId("");
+          }}
+        />
+      )}
       <CustomerPicker
         customers={master.customers}
         value={customer}
@@ -532,11 +602,7 @@ function Accountant2Form({ master }: { master: MasterData }) {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
-  const [check, setCheck] = useState<{
-    amount: number | null;
-    wallet: string | null;
-    transferReference: string | null;
-  } | null>(null);
+  const [check, setCheck] = useState<Extraction | null>(null);
   const mismatches = check
     ? findMismatches(check, { amount: Number(amount) || 0, wallet })
     : [];
@@ -548,7 +614,12 @@ function Accountant2Form({ master }: { master: MasterData }) {
     }
     setChecking(true);
     try {
-      setCheck(await analyzeSms({ data: { smsText: sms } }));
+      const r = await analyzeSms({ data: { smsText: sms } });
+      setCheck(r);
+      if (!amount && r.amount != null) setAmount(String(r.amount));
+      if (!wallet && r.wallet) setWallet(r.wallet);
+      const sug = customerSuggestions(master.customers, r);
+      if (sug.length === 1 && !customer) setCustomer({ id: sug[0]!.id, name: sug[0]!.name });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "تعذر تحليل الرسالة");
     } finally {
@@ -648,43 +719,25 @@ function Accountant2Form({ master }: { master: MasterData }) {
       <button
         type="button"
         onClick={runCheck}
-        disabled={checking}
-        className="hidden"
+        disabled={checking || !sms.trim()}
+        className="flex w-full items-center justify-center gap-2 rounded-xl border border-primary px-4 py-2.5 text-sm font-medium text-primary disabled:opacity-50"
       >
         {checking && <Loader2 className="h-4 w-4 animate-spin" />}
-        مطابقة الرسالة بالذكاء الاصطناعي
+        قراءة الرسالة وتعبئة الحقول
       </button>
 
       {check && (
-        <div
-          className={
-            "rounded-xl border p-3 text-xs " +
-            (mismatches.length ? "border-destructive bg-destructive/10" : "border-border bg-background")
-          }
-        >
-          <p className="mb-1.5 font-semibold">ما قرأناه من الرسالة:</p>
-          <p>المبلغ: {check.amount ?? "غير موجود"}</p>
-          <p>المحفظة: {WALLETS.find((w) => w.value === check.wallet)?.label ?? "غير محددة"}</p>
-          <p>مرجع التحويل: {check.transferReference ?? "غير موجود"}</p>
-          {mismatches.length === 0 ? (
-            <p className="mt-2 font-medium text-primary">مطابقة للبيانات المدخلة ✓</p>
-          ) : (
-            <ul className="mt-2 space-y-1 font-medium text-destructive">
-              {mismatches.map((m) => (
-                <li key={m.field}>
-                  {m.field === "amount"
-                    ? `المبلغ مختلف: الرسالة ${m.sms} والمُدخل ${m.entered}`
-                    : `المحفظة مختلفة: الرسالة ${WALLETS.find((w) => w.value === m.sms)?.label} والمُختار ${WALLETS.find((w) => w.value === m.entered)?.label}`}
-                </li>
-              ))}
-            </ul>
+        <SmartReadResult
+          ext={check}
+          customers={master.customers}
+          selectedCustomerId={customer?.id}
+          onPickCustomer={(c) => setCustomer({ id: c.id, name: c.name })}
+          problems={mismatches.map((m) =>
+            m.field === "amount"
+              ? `المبلغ مختلف: الرسالة ${m.sms} والمُدخل ${m.entered}`
+              : `المحفظة مختلفة: الرسالة ${WALLETS.find((w) => w.value === m.sms)?.label} والمُختار ${WALLETS.find((w) => w.value === m.entered)?.label}`,
           )}
-          {check.wallet && !wallet && (
-            <button type="button" onClick={() => setWallet(check.wallet!)} className="mt-2 underline">
-              استخدم المحفظة من الرسالة
-            </button>
-          )}
-        </div>
+        />
       )}
 
       <button

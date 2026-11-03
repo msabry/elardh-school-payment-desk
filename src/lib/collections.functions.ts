@@ -38,8 +38,8 @@ export const getMasterData = createServerFn({ method: "GET" })
       "Kids!A2:C1000",
       "Programs!A2:B1000",
       // Enrollments: A enrollment_id (kidId_programId, the primary key),
-      // B kid_id, C program_id, D kid_name, E program_name.
-      "Enrollments!A2:E1000",
+      // B kid_id, C program_id, D kid_name, E program_name, F status (active).
+      "Enrollments!A2:F1000",
     ]);
     return {
       customers: customers
@@ -291,6 +291,37 @@ export const analyzeSms = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { extractSms } = await import("./sms-ai.server");
     return extractSms(data.smsText);
+  });
+
+export const analyzeScreenshot = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (input: { transactionId?: string; image: { name: string; mimeType: string; dataBase64: string } }) => {
+      if (!input?.image?.dataBase64) throw new Error("Screenshot is required");
+      if (!input.image.mimeType.startsWith("image/")) throw new Error("Upload an image");
+      if (input.image.dataBase64.length > 7_000_000) throw new Error("Screenshot is too large (max ~5 MB)");
+      return input;
+    },
+  )
+  .handler(async ({ data }) => {
+    const { extractImage } = await import("./sms-ai.server");
+    const extraction = await extractImage(data.image.dataBase64, data.image.mimeType);
+    // Keep the screenshot with the transaction when it has no receipt yet (column J).
+    if (data.transactionId) {
+      try {
+        const gw = await import("./google-gateway");
+        const rows = await gw.getValues("Transactions!A2:J1000");
+        const idx = rows.findIndex((r) => r[0] === data.transactionId);
+        if (idx >= 0 && !(rows[idx]?.[9] ?? "").trim()) {
+          const safeName = data.image.name.replace(/[^\w.\- ]/g, "_");
+          const fileId = await gw.uploadReceipt(`${Date.now()}-${safeName}`, data.image.mimeType, data.image.dataBase64);
+          await gw.updateValues(`Transactions!J${idx + 2}:J${idx + 2}`, [[fileId]]);
+        }
+      } catch (e) {
+        console.error("Saving screenshot failed", e);
+      }
+    }
+    return extraction;
   });
 
 export type TransactionRow = {
