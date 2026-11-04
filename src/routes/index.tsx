@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { findMismatches, pickActiveEnrollment } from "@/lib/filters";
+import { activeProgramIds, findMismatches, pickActiveEnrollment } from "@/lib/filters";
 import { SmartReadResult, customerSuggestions, type Extraction } from "@/components/smart-read";
 import { toast } from "sonner";
 import { BadgeCheck, Banknote, ListChecks, Loader2, LogOut, Paperclip, Search, Wallet } from "lucide-react";
@@ -367,19 +367,21 @@ function Accountant1Form({ master }: { master: MasterData }) {
     () => master.kids.filter((k) => k.customerId === customer?.id),
     [master, customer],
   );
+  // Courses whose Programs-tab Status says Active decide the child's current course.
+  const activePrograms = useMemo(() => activeProgramIds(master.programs), [master]);
   const programs = useMemo(() => {
     const enrolled = master.enrollments
       .filter((e) => e.kidId === kidId)
       .map((e) => e.programId);
     const list = master.programs.filter((p) => enrolled.includes(p.id));
-    const active = pickActiveEnrollment(master.enrollments, kidId)?.programId;
+    const active = pickActiveEnrollment(master.enrollments, kidId, activePrograms)?.programId;
     const base = list.length > 0 ? list : master.programs;
     return [...base].sort((a, b) => Number(b.id === active) - Number(a.id === active));
-  }, [master, kidId]);
+  }, [master, kidId, activePrograms]);
   useEffect(() => {
-    const active = pickActiveEnrollment(master.enrollments, kidId);
+    const active = pickActiveEnrollment(master.enrollments, kidId, activePrograms);
     setProgramId(active?.programId ?? "");
-  }, [master, kidId]);
+  }, [master, kidId, activePrograms]);
 
   if (done) return <SuccessBanner transactionId={done} onReset={() => resetAll()} />;
 

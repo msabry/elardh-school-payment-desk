@@ -7,7 +7,7 @@ import { isUsableMasterRow, normalizeEnrollments, type Enrollment } from "./filt
 export type MasterData = {
   customers: { id: string; name: string; phone: string }[];
   kids: { id: string; customerId: string; name: string }[];
-  programs: { id: string; name: string }[];
+  programs: { id: string; name: string; status: string }[];
   enrollments: Enrollment[];
 };
 
@@ -36,10 +36,12 @@ export const getMasterData = createServerFn({ method: "GET" })
     const [customers = [], kids = [], programs = [], enrollments = []] = await gw.batchGetValues([
       "Customers!A2:C1000",
       "Kids!A2:C1000",
-      "Programs!A2:B1000",
+      // Programs: A program_id, B program_name, C start_date, D end_date, E Status.
+      // Only Status decides whether a course is the child's current one.
+      "Programs!A2:E1000",
       // Enrollments: A enrollment_id (kidId_programId, the primary key),
-      // B kid_id, C program_id, D kid_name, E program_name, F start_date, G end_date.
-      "Enrollments!A2:G1000",
+      // B kid_id, C program_id, D kid_name, E program_name.
+      "Enrollments!A2:E1000",
     ]);
     return {
       customers: customers
@@ -51,7 +53,7 @@ export const getMasterData = createServerFn({ method: "GET" })
       // Programs rows may hold only the name (column A) with no separate id;
 
       // fall back to the id column text as the display name.
-      programs: programs.filter((r) => r[0]).map((r) => ({ id: r[0]!, name: (r[1] ?? "").trim() || r[0]! })),
+      programs: programs.filter((r) => r[0]).map((r) => ({ id: r[0]!, name: (r[1] ?? "").trim() || r[0]!, status: (r[4] ?? "").trim() })),
       enrollments: normalizeEnrollments(enrollments),
     };
   });
