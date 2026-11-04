@@ -90,27 +90,30 @@ describe("enrollment_id is the Enrollments primary key", () => {
     expect(normalizeEnrollments(rows).map((e) => e.id)).toEqual(["1_P001", "2_P006"]);
   });
   it("recovers kid and course from the id when their columns are blank", () => {
-    expect(normalizeEnrollments([["7_P008", "", ""]])).toEqual([{ id: "7_P008", kidId: "7", programId: "P008", active: false }]);
+    expect(normalizeEnrollments([["7_P008", "", ""]])).toEqual([{ id: "7_P008", kidId: "7", programId: "P008", startDate: "", endDate: "" }]);
   });
 });
 
 
-describe("active enrollment", () => {
-  const rows = [
-    ["1_P001", "1", "P001", "", "", ""],
-    ["1_P006", "1", "P006", "", "", "active"],
-    ["2_P001", "2", "P001"],
-    ["2_P008", "2", "P008"],
-  ];
-  const en = normalizeEnrollments(rows);
-  it("prefers the row marked active", () => {
-    expect(pickActiveEnrollment(en, "1")?.programId).toBe("P006");
+describe("active enrollment = today between start_date and end_date", () => {
+  const en = normalizeEnrollments([
+    ["1_P001", "1", "P001", "", "", "2025-09-01", "2026-06-30"],
+    ["1_P006", "1", "P006", "", "", "1/9/2026", "30/6/2027"],
+    ["2_P001", "2", "P001", "", "", "2027-01-01", "2027-06-30"],
+    ["3_P001", "3", "P001"],
+  ]);
+  it("picks the enrollment whose dates contain today", () => {
+    expect(pickActiveEnrollment(en, "1", "2026-11-04")?.programId).toBe("P006");
   });
-  it("falls back to the last-listed enrollment", () => {
-    expect(pickActiveEnrollment(en, "2")?.programId).toBe("P008");
+  it("start and end days count as active", () => {
+    expect(pickActiveEnrollment(en, "1", "2026-06-30")?.programId).toBe("P001");
+    expect(pickActiveEnrollment(en, "1", "2026-09-01")?.programId).toBe("P006");
   });
-  it("is null for a kid with no enrollment", () => {
-    expect(pickActiveEnrollment(en, "9")).toBeNull();
+  it("is null when today is outside every range", () => {
+    expect(pickActiveEnrollment(en, "2", "2026-11-04")).toBeNull();
+  });
+  it("is null when dates are missing", () => {
+    expect(pickActiveEnrollment(en, "3", "2026-11-04")).toBeNull();
   });
 });
 
