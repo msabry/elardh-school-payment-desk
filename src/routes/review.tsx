@@ -21,7 +21,7 @@ import {
 } from "@/lib/collections.functions";
 
 import { TxFiltersBar } from "@/components/tx-filters";
-import { applyFilters, emptyFilters, isSupplierPayment, type TxFilters } from "@/lib/filters";
+import { applyFilters, emptyFilters, isSupplierPayment, pickActiveEnrollment, type TxFilters } from "@/lib/filters";
 
 const WALLET_LABELS: Record<string, string> = {
   instapay: "إنستاباي",
@@ -357,7 +357,11 @@ function AccountantEdits({
   const kid = kids.find((k) => k.name === value.kidName);
   const enrolled = kid ? master.enrollments.filter((e) => e.kidId === kid.id).map((e) => e.programId) : [];
   const progList = master.programs.filter((p) => enrolled.includes(p.id));
-  const progNames = (progList.length ? progList : master.programs).map((p) => p.name);
+  const activeId = kid ? pickActiveEnrollment(master.enrollments, kid.id)?.programId : undefined;
+  const activeName = master.programs.find((p) => p.id === activeId)?.name ?? "";
+  const progNames = (progList.length ? progList : master.programs)
+    .map((p) => p.name)
+    .sort((a, b) => Number(b === activeName) - Number(a === activeName));
   if (value.programName && !progNames.includes(value.programName)) progNames.unshift(value.programName);
 
   return (
@@ -366,7 +370,12 @@ function AccountantEdits({
         <>
           <div>
             <label className="mb-1 block text-xs font-medium">الطفل</label>
-            <select value={value.kidName} onChange={(e) => onChange({ kidName: e.target.value })} className={fieldCls}>
+            <select value={value.kidName} onChange={(e) => {
+              const k = kids.find((x) => x.name === e.target.value);
+              const a = k ? pickActiveEnrollment(master.enrollments, k.id)?.programId : undefined;
+              const name = master.programs.find((p) => p.id === a)?.name ?? "";
+              onChange({ kidName: e.target.value, programName: name });
+            }} className={fieldCls}>
               <option value="">اختر الطفل…</option>
               {kidNames.map((n) => (
                 <option key={n} value={n}>{n}</option>
@@ -378,7 +387,7 @@ function AccountantEdits({
             <select value={value.programName} onChange={(e) => onChange({ programName: e.target.value })} className={fieldCls}>
               <option value="">اختر الدورة…</option>
               {progNames.map((n) => (
-                <option key={n} value={n}>{n}</option>
+                <option key={n} value={n}>{n === activeName ? `${n} (الحالية)` : n}</option>
               ))}
             </select>
           </div>

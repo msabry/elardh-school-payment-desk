@@ -53,7 +53,7 @@ export const isUsableMasterRow = (row: (string | undefined)[], nameIndex: number
   Boolean(row[0]?.trim() && (row[nameIndex] ?? "").trim());
 
 /** One child's subscription to one course, keyed by the Enrollments primary key. */
-export type Enrollment = { id: string; kidId: string; programId: string; active: boolean };
+export type Enrollment = { id: string; kidId: string; programId: string; startDate: string; endDate: string };
 
 /**
  * enrollment_id is composed as `${kid_id}_${program_id}`. Program ids never
@@ -82,22 +82,42 @@ export function normalizeEnrollments(rows: (string | undefined)[][]): Enrollment
     const kidId = (row[1] ?? "").trim() || parsed?.kidId || "";
     const programId = (row[2] ?? "").trim() || parsed?.programId || "";
     if (!kidId || !programId) continue;
-    const status = (row[5] ?? "").trim().toLowerCase();
-    const active = ["active", "نشط", "yes", "1", "true"].includes(status);
-    if (!byId.has(id)) byId.set(id, { id, kidId, programId, active });
+    const startDate = parseSheetDate(row[5] ?? "");
+    const endDate = parseSheetDate(row[6] ?? "");
+    if (!byId.has(id)) byId.set(id, { id, kidId, programId, startDate, endDate });
   }
   return [...byId.values()];
 }
 
 
 
+/** Sheet date (YYYY-MM-DD, D/M/YYYY or DD-MM-YYYY) as YYYY-MM-DD; "" when unreadable. */
+export function parseSheetDate(v: string): string {
+  const t = v.trim();
+  let m = t.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+  if (m) return `${m[1]}-${m[2]!.padStart(2, "0")}-${m[3]!.padStart(2, "0")}`;
+  m = t.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+  if (m) return `${m[3]}-${m[2]!.padStart(2, "0")}-${m[1]!.padStart(2, "0")}`;
+  return "";
+}
+
+/** Today as YYYY-MM-DD in Cairo time. */
+export const cairoToday = () => new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Cairo" });
+
 /**
- * A kid's active enrollment: the row marked active in the Enrollments status
- * column (F); when none is marked, the last-listed enrollment for that kid.
+ * A kid's active enrollment: today falls between its start_date (F) and
+ * end_date (G), both inclusive. No dates, or today outside them, = not active.
  */
-export function pickActiveEnrollment(enrollments: Enrollment[], kidId: string): Enrollment | null {
-  const mine = enrollments.filter((e) => e.kidId === kidId);
-  return mine.find((e) => e.active) ?? mine[mine.length - 1] ?? null;
+export function pickActiveEnrollment(
+  enrollments: Enrollment[],
+  kidId: string,
+  today: string = cairoToday(),
+): Enrollment | null {
+  return (
+    enrollments.find(
+      (e) => e.kidId === kidId && e.startDate && e.endDate && e.startDate <= today && today <= e.endDate,
+    ) ?? null
+  );
 }
 
 /** Egyptian mobile numbers compared on their last 10 digits (drops +20 / 0 / spaces). */

@@ -38,8 +38,8 @@ export const getMasterData = createServerFn({ method: "GET" })
       "Kids!A2:C1000",
       "Programs!A2:B1000",
       // Enrollments: A enrollment_id (kidId_programId, the primary key),
-      // B kid_id, C program_id, D kid_name, E program_name, F status (active).
-      "Enrollments!A2:F1000",
+      // B kid_id, C program_id, D kid_name, E program_name, F start_date, G end_date.
+      "Enrollments!A2:G1000",
     ]);
     return {
       customers: customers
