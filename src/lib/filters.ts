@@ -53,7 +53,7 @@ export const isUsableMasterRow = (row: (string | undefined)[], nameIndex: number
   Boolean(row[0]?.trim() && (row[nameIndex] ?? "").trim());
 
 /** One child's subscription to one course, keyed by the Enrollments primary key. */
-export type Enrollment = { id: string; kidId: string; programId: string; startDate: string; endDate: string };
+export type Enrollment = { id: string; kidId: string; programId: string };
 
 /**
  * enrollment_id is composed as `${kid_id}_${program_id}`. Program ids never
@@ -82,42 +82,37 @@ export function normalizeEnrollments(rows: (string | undefined)[][]): Enrollment
     const kidId = (row[1] ?? "").trim() || parsed?.kidId || "";
     const programId = (row[2] ?? "").trim() || parsed?.programId || "";
     if (!kidId || !programId) continue;
-    const startDate = parseSheetDate(row[5] ?? "");
-    const endDate = parseSheetDate(row[6] ?? "");
-    if (!byId.has(id)) byId.set(id, { id, kidId, programId, startDate, endDate });
+    if (!byId.has(id)) byId.set(id, { id, kidId, programId });
   }
   return [...byId.values()];
 }
 
 
 
-/** Sheet date (YYYY-MM-DD, D/M/YYYY or DD-MM-YYYY) as YYYY-MM-DD; "" when unreadable. */
-export function parseSheetDate(v: string): string {
-  const t = v.trim();
-  let m = t.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
-  if (m) return `${m[1]}-${m[2]!.padStart(2, "0")}-${m[3]!.padStart(2, "0")}`;
-  m = t.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
-  if (m) return `${m[3]}-${m[2]!.padStart(2, "0")}-${m[1]!.padStart(2, "0")}`;
-  return "";
+/**
+ * A course is running when the Programs tab's Status column (E) says Active.
+ * Anything else — Inactive, blank or a different spelling — counts as not running.
+ */
+export function isProgramActive(status: string): boolean {
+  const s = status.trim().toLowerCase();
+  return s === "active" || s === "نشط";
 }
 
-/** Today as YYYY-MM-DD in Cairo time. */
-export const cairoToday = () => new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Cairo" });
+/** Ids of the courses whose Programs-tab Status says Active. */
+export function activeProgramIds<T extends { id: string; status: string }>(programs: T[]): Set<string> {
+  return new Set(programs.filter((p) => isProgramActive(p.status)).map((p) => p.id));
+}
 
 /**
- * A kid's active enrollment: today falls between its start_date (F) and
- * end_date (G), both inclusive. No dates, or today outside them, = not active.
+ * A kid's active enrollment: the course they are enrolled in whose Programs-tab
+ * Status says Active. Null when the kid has no enrollment in a running course.
  */
 export function pickActiveEnrollment(
   enrollments: Enrollment[],
   kidId: string,
-  today: string = cairoToday(),
+  activePrograms: Set<string>,
 ): Enrollment | null {
-  return (
-    enrollments.find(
-      (e) => e.kidId === kidId && e.startDate && e.endDate && e.startDate <= today && today <= e.endDate,
-    ) ?? null
-  );
+  return enrollments.find((e) => e.kidId === kidId && activePrograms.has(e.programId)) ?? null;
 }
 
 /** Egyptian mobile numbers compared on their last 10 digits (drops +20 / 0 / spaces). */
