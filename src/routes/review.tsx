@@ -21,7 +21,7 @@ import {
 } from "@/lib/collections.functions";
 
 import { TxFiltersBar } from "@/components/tx-filters";
-import { applyFilters, emptyFilters, isSupplierPayment, pickActiveEnrollment, type TxFilters } from "@/lib/filters";
+import { activeProgramIds, applyFilters, emptyFilters, isSupplierPayment, pickActiveEnrollment, type TxFilters } from "@/lib/filters";
 
 const WALLET_LABELS: Record<string, string> = {
   instapay: "إنستاباي",
@@ -355,9 +355,10 @@ function AccountantEdits({
   const kidNames = kids.map((k) => k.name);
   if (value.kidName && !kidNames.includes(value.kidName)) kidNames.unshift(value.kidName);
   const kid = kids.find((k) => k.name === value.kidName);
+  const activePrograms = activeProgramIds(master.programs);
   const enrolled = kid ? master.enrollments.filter((e) => e.kidId === kid.id).map((e) => e.programId) : [];
   const progList = master.programs.filter((p) => enrolled.includes(p.id));
-  const activeId = kid ? pickActiveEnrollment(master.enrollments, kid.id)?.programId : undefined;
+  const activeId = kid ? pickActiveEnrollment(master.enrollments, kid.id, activePrograms)?.programId : undefined;
   const activeName = master.programs.find((p) => p.id === activeId)?.name ?? "";
   const progNames = (progList.length ? progList : master.programs)
     .map((p) => p.name)
@@ -372,7 +373,7 @@ function AccountantEdits({
             <label className="mb-1 block text-xs font-medium">الطفل</label>
             <select value={value.kidName} onChange={(e) => {
               const k = kids.find((x) => x.name === e.target.value);
-              const a = k ? pickActiveEnrollment(master.enrollments, k.id)?.programId : undefined;
+              const a = k ? pickActiveEnrollment(master.enrollments, k.id, activePrograms)?.programId : undefined;
               const name = master.programs.find((p) => p.id === a)?.name ?? "";
               onChange({ kidName: e.target.value, programName: name });
             }} className={fieldCls}>
