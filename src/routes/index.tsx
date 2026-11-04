@@ -337,7 +337,10 @@ function Accountant1Form({ master }: { master: MasterData }) {
   const [reading, setReading] = useState(false);
   const [ext, setExt] = useState<Extraction | null>(null);
   async function readSms() {
-    if (!sms.trim()) return toast.error("الصق نص رسالة التأكيد أولاً");
+    if (!sms.trim()) {
+      toast.error("الصق نص رسالة التأكيد أولاً");
+      return;
+    }
     setReading(true);
     try {
       const r = await analyzeSms({ data: { smsText: sms } });
