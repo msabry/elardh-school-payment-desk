@@ -35,9 +35,9 @@ export function SmartReadResult({
 }: {
   ext: Extraction;
   customers: Customer[];
-  selectedCustomerId?: string;
-  onPickCustomer?: (c: Customer) => void;
-  problems?: string[];
+  selectedCustomerId?: string | undefined;
+  onPickCustomer?: ((c: Customer) => void) | undefined;
+  problems?: string[] | undefined;
 }) {
   const suggestions = customerSuggestions(customers, ext);
   const party = (name: string | null, phone: string | null) =>
