@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   activeProgramIds,
   applyFilters,
+  canMarkMissing,
   emptyFilters,
   findMismatches,
   isProgramActive,
@@ -28,6 +29,14 @@ describe("transaction filters", () => {
   });
   it("date range is inclusive", () => {
     expect(applyFilters(items, { ...emptyFilters, from: "2026-10-28", to: "2026-10-28" }).map((i) => i.id)).toEqual([2]);
+  });
+});
+
+describe("missing review status", () => {
+  it("allows pending transactions but never confirmed ones", () => {
+    expect(canMarkMissing("pending")).toBe(true);
+    expect(canMarkMissing("missing")).toBe(true);
+    expect(canMarkMissing(" confirmed ")).toBe(false);
   });
 });
 

@@ -32,12 +32,16 @@ export function SmartReadResult({
   selectedCustomerId,
   onPickCustomer,
   problems = [],
+  suggestionsTitle = "العميل المقترح:",
+  noSuggestionsText = "لم نجد عميلاً بنفس الرقم أو الاسم",
 }: {
   ext: Extraction;
   customers: Customer[];
   selectedCustomerId?: string | undefined;
   onPickCustomer?: ((c: Customer) => void) | undefined;
   problems?: string[] | undefined;
+  suggestionsTitle?: string;
+  noSuggestionsText?: string;
 }) {
   const suggestions = customerSuggestions(customers, ext);
   const party = (name: string | null, phone: string | null) =>
@@ -57,9 +61,9 @@ export function SmartReadResult({
       <p>المُستلِم: {party(ext.receiverName, ext.receiverPhone)}</p>
 
       <div className="mt-2">
-        <p className="font-semibold">العميل المقترح:</p>
+        <p className="font-semibold">{suggestionsTitle}</p>
         {suggestions.length === 0 ? (
-          <p className="text-muted-foreground">لم نجد عميلاً بنفس الرقم أو الاسم</p>
+          <p className="text-muted-foreground">{noSuggestionsText}</p>
         ) : (
           <div className="mt-1 flex flex-wrap gap-1.5">
             {suggestions.map((c) =>

@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { isUsableMasterRow, normalizeEnrollments, type Enrollment } from "./filters";
+import { canMarkMissing, isUsableMasterRow, normalizeEnrollments, type Enrollment } from "./filters";
 
 
 
@@ -206,6 +206,29 @@ export const confirmTransaction = createServerFn({ method: "POST" })
     return { ok: true as const };
   });
 
+export const markTransactionMissing = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { transactionId: string }) => {
+    if (!input?.transactionId) throw new Error("Transaction is required");
+    return input;
+  })
+  .handler(async ({ data, context }) => {
+    const myEmail = (context.claims.email as string | undefined)?.toLowerCase() ?? "";
+    const gw = await import("./google-gateway");
+    const rows = await gw.getValues("Transactions!A2:O1000");
+    const idx = rows.findIndex((r) => r[0] === data.transactionId);
+    if (idx < 0) throw new Error("Transaction not found");
+    const recordedBy = (rows[idx]?.[10] ?? "").trim().toLowerCase();
+    if (recordedBy === myEmail) {
+      throw new Error("You can only review transactions submitted by the other accountant");
+    }
+    if (!canMarkMissing(((rows[idx]?.[12] ?? "") || "pending").trim().toLowerCase())) {
+      throw new Error("Confirmed transactions cannot be marked missing");
+    }
+    await gw.updateValues(`Transactions!M${idx + 2}:M${idx + 2}`, [["missing"]]);
+    return { ok: true as const };
+  });
+
 export type Supplier = { id: string; name: string; phone: string };
 
 export const getSuppliers = createServerFn({ method: "GET" })
@@ -226,6 +249,8 @@ type SubmitPaymentInput = {
   expenseItem: string;
   amount: number;
   transferReference?: string;
+  smsText?: string;
+  wallet?: string;
   receipt?: { name: string; mimeType: string; dataBase64: string };
 };
 
@@ -235,6 +260,9 @@ export const submitPayment = createServerFn({ method: "POST" })
     if (!input.supplierId || !input.supplierName) throw new Error("Supplier is required");
     if (!input.expenseItem?.trim()) throw new Error("Expense item is required");
     if (!input.amount || input.amount <= 0) throw new Error("Amount must be greater than zero");
+    if (input.wallet && !["instapay", "vodaphone", "cash"].includes(input.wallet)) {
+      throw new Error("Wallet is invalid");
+    }
     if (input.receipt && input.receipt.dataBase64.length > 7_000_000) {
       throw new Error("Receipt file is too large (max ~5 MB)");
     }

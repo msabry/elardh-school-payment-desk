@@ -22,6 +22,7 @@ export function TxFiltersBar({ value, onChange }: { value: TxFilters; onChange: 
           <option value="">الكل</option>
           <option value="pending">في انتظار المراجعة</option>
           <option value="confirmed">مؤكد</option>
+          <option value="missing">مفقود</option>
         </select>
       </label>
       <label className="text-xs">
