@@ -249,6 +249,8 @@ type SubmitPaymentInput = {
   expenseItem: string;
   amount: number;
   transferReference?: string;
+  smsText?: string;
+  wallet?: string;
   receipt?: { name: string; mimeType: string; dataBase64: string };
 };
 
