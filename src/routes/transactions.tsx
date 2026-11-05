@@ -83,7 +83,7 @@ function TransactionsPage() {
                   <p className="mt-1 text-xs text-muted-foreground">
                     {isSupplierPayment(t.transactionType) ? "دفعة لمورّد" : "تحصيل عميل"} ·{" "}
                     {new Date(t.date).toLocaleDateString("ar-EG")} · {WALLET_LABELS[t.wallet] ?? "—"} ·{" "}
-                    {t.status === "confirmed" ? "مؤكد" : "في انتظار المراجعة"}
+                    {t.status === "confirmed" ? "مؤكد" : t.status === "missing" ? "مفقود" : "في انتظار المراجعة"}
                   </p>
                   {(t.kidName || t.programName) && (
                     <p className="mt-1 text-xs">

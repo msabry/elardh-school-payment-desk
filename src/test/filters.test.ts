@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   activeProgramIds,
   applyFilters,
+  canMarkMissing,
   emptyFilters,
   findMismatches,
   isProgramActive,

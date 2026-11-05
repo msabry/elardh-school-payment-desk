@@ -2,6 +2,9 @@ export type TxFilters = { wallet: string; status: string; from: string; to: stri
 
 export const emptyFilters: TxFilters = { wallet: "", status: "", from: "", to: "" };
 
+/** Confirmed transactions are final; every other status can be marked missing. */
+export const canMarkMissing = (status: string) => status.trim().toLowerCase() !== "confirmed";
+
 /** Filter by wallet, status and inclusive date range (YYYY-MM-DD, Cairo-local date). */
 export function applyFilters<T extends { wallet: string; status: string; date: string }>(
   items: T[],

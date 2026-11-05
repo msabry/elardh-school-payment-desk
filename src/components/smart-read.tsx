@@ -32,12 +32,16 @@ export function SmartReadResult({
   selectedCustomerId,
   onPickCustomer,
   problems = [],
+  suggestionsTitle = "العميل المقترح:",
+  noSuggestionsText = "لم نجد عميلاً بنفس الرقم أو الاسم",
 }: {
   ext: Extraction;
   customers: Customer[];
   selectedCustomerId?: string | undefined;
   onPickCustomer?: ((c: Customer) => void) | undefined;
   problems?: string[] | undefined;
+  suggestionsTitle?: string;
+  noSuggestionsText?: string;
 }) {
   const suggestions = customerSuggestions(customers, ext);
   const party = (name: string | null, phone: string | null) =>
