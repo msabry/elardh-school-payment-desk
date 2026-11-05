@@ -13,3 +13,5 @@
 - [x] Story 1+2: SMS reading fills amount/wallet/reference/sender + suggests customer (both forms)
 - [ ] Story 3: reviewer screenshot reading (server ready, UI pending)
 - [x] Story 4: child's current course = enrolled course whose Programs Status says Active; pre-selected on home + review (verified in preview as Accountant 1)
+- [ ] Review: mark unconfirmed transactions "missing"; show/filter the new status
+- [ ] Supplier payments: SMS reading fills amount/wallet/reference, suggests supplier, and saves SMS/wallet
