@@ -48,9 +48,39 @@ function PaymentsPage() {
   const [expenseItem, setExpenseItem] = useState("");
   const [amount, setAmount] = useState("");
   const [reference, setReference] = useState("");
+  const [wallet, setWallet] = useState("");
+  const [sms, setSms] = useState("");
+  const [reading, setReading] = useState(false);
+  const [ext, setExt] = useState<Extraction | null>(null);
   const [receipt, setReceipt] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<string | null>(null);
+  const mismatches = ext
+    ? findMismatches(ext, { amount: Number(amount) || 0, wallet })
+    : [];
+
+  async function readSms() {
+    if (!sms.trim()) {
+      toast.error("الصق نص رسالة التأكيد أولاً");
+      return;
+    }
+    setReading(true);
+    try {
+      const result = await analyzeSms({ data: { smsText: sms } });
+      setExt(result);
+      if (result.amount != null) setAmount(String(result.amount));
+      if (result.wallet) setWallet(result.wallet);
+      if (result.transferReference) setReference(result.transferReference);
+      const suggestions = customerSuggestions(suppliers ?? [], result);
+      if (suggestions.length === 1 && !supplier) {
+        setSupplier({ id: suggestions[0]!.id, name: suggestions[0]!.name });
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "تعذر تحليل الرسالة");
+    } finally {
+      setReading(false);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;

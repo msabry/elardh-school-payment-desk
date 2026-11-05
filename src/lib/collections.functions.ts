@@ -260,6 +260,9 @@ export const submitPayment = createServerFn({ method: "POST" })
     if (!input.supplierId || !input.supplierName) throw new Error("Supplier is required");
     if (!input.expenseItem?.trim()) throw new Error("Expense item is required");
     if (!input.amount || input.amount <= 0) throw new Error("Amount must be greater than zero");
+    if (input.wallet && !["instapay", "vodaphone", "cash"].includes(input.wallet)) {
+      throw new Error("Wallet is invalid");
+    }
     if (input.receipt && input.receipt.dataBase64.length > 7_000_000) {
       throw new Error("Receipt file is too large (max ~5 MB)");
     }
