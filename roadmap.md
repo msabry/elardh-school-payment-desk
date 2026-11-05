@@ -12,4 +12,4 @@
 - [x] Enrollments: enrollment_id (kid_id_program_id) treated as primary key — required, deduped, parsed for kid/course (verified in preview as Accountant 1)
 - [x] Story 1+2: SMS reading fills amount/wallet/reference/sender + suggests customer (both forms)
 - [ ] Story 3: reviewer screenshot reading (server ready, UI pending)
-- [x] Story 4: active enrollment = today between start_date (F) and end_date (G); pre-selected on home + review
+- [x] Story 4: child's current course = enrolled course whose Programs Status says Active; pre-selected on home + review (verified in preview as Accountant 1)
