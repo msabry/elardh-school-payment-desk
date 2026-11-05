@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  activeProgramIds,
   applyFilters,
   emptyFilters,
   findMismatches,
+  isProgramActive,
   isSupplierPayment,
   isUsableMasterRow,
   normalizeEnrollments,
@@ -90,30 +92,42 @@ describe("enrollment_id is the Enrollments primary key", () => {
     expect(normalizeEnrollments(rows).map((e) => e.id)).toEqual(["1_P001", "2_P006"]);
   });
   it("recovers kid and course from the id when their columns are blank", () => {
-    expect(normalizeEnrollments([["7_P008", "", ""]])).toEqual([{ id: "7_P008", kidId: "7", programId: "P008", startDate: "", endDate: "" }]);
+    expect(normalizeEnrollments([["7_P008", "", ""]])).toEqual([{ id: "7_P008", kidId: "7", programId: "P008" }]);
   });
 });
 
 
-describe("active enrollment = today between start_date and end_date", () => {
+describe("active enrollment = course whose Programs Status says Active", () => {
+  const programs = [
+    { id: "P001", name: "مدرسة الكبار 2027", status: "Active" },
+    { id: "P006", name: "اليافعات", status: "Active" },
+    { id: "P008", name: "مدرسة الصغار 26 الصيد", status: "Inactive" },
+    { id: "P009", name: "مدرسة الكبار 2026", status: "" },
+  ];
   const en = normalizeEnrollments([
-    ["1_P001", "1", "P001", "", "", "2025-09-01", "2026-06-30"],
-    ["1_P006", "1", "P006", "", "", "1/9/2026", "30/6/2027"],
-    ["2_P001", "2", "P001", "", "", "2027-01-01", "2027-06-30"],
-    ["3_P001", "3", "P001"],
+    ["1_P008", "1", "P008"],
+    ["1_P006", "1", "P006"],
+    ["2_P008", "2", "P008"],
+    ["3_P009", "3", "P009"],
   ]);
-  it("picks the enrollment whose dates contain today", () => {
-    expect(pickActiveEnrollment(en, "1", "2026-11-04")?.programId).toBe("P006");
+  const active = activeProgramIds(programs);
+
+  it("only Active counts; Inactive, blank and other spellings do not", () => {
+    expect(isProgramActive("Active")).toBe(true);
+    expect(isProgramActive(" active ")).toBe(true);
+    expect(isProgramActive("Inactive")).toBe(false);
+    expect(isProgramActive("")).toBe(false);
+    expect([...active]).toEqual(["P001", "P006"]);
   });
-  it("start and end days count as active", () => {
-    expect(pickActiveEnrollment(en, "1", "2026-06-30")?.programId).toBe("P001");
-    expect(pickActiveEnrollment(en, "1", "2026-09-01")?.programId).toBe("P006");
+  it("skips the kid's inactive course and picks the running one", () => {
+    expect(pickActiveEnrollment(en, "1", active)?.id).toBe("1_P006");
   });
-  it("is null when today is outside every range", () => {
-    expect(pickActiveEnrollment(en, "2", "2026-11-04")).toBeNull();
+  it("is null when every course the kid takes is inactive", () => {
+    expect(pickActiveEnrollment(en, "2", active)).toBeNull();
+    expect(pickActiveEnrollment(en, "3", active)).toBeNull();
   });
-  it("is null when dates are missing", () => {
-    expect(pickActiveEnrollment(en, "3", "2026-11-04")).toBeNull();
+  it("is null for a kid with no enrollment", () => {
+    expect(pickActiveEnrollment(en, "99", active)).toBeNull();
   });
 });
 
