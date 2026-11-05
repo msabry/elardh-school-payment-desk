@@ -206,6 +206,29 @@ export const confirmTransaction = createServerFn({ method: "POST" })
     return { ok: true as const };
   });
 
+export const markTransactionMissing = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { transactionId: string }) => {
+    if (!input?.transactionId) throw new Error("Transaction is required");
+    return input;
+  })
+  .handler(async ({ data, context }) => {
+    const myEmail = (context.claims.email as string | undefined)?.toLowerCase() ?? "";
+    const gw = await import("./google-gateway");
+    const rows = await gw.getValues("Transactions!A2:O1000");
+    const idx = rows.findIndex((r) => r[0] === data.transactionId);
+    if (idx < 0) throw new Error("Transaction not found");
+    const recordedBy = (rows[idx]?.[10] ?? "").trim().toLowerCase();
+    if (recordedBy === myEmail) {
+      throw new Error("You can only review transactions submitted by the other accountant");
+    }
+    if (!canMarkMissing(((rows[idx]?.[12] ?? "") || "pending").trim().toLowerCase())) {
+      throw new Error("Confirmed transactions cannot be marked missing");
+    }
+    await gw.updateValues(`Transactions!M${idx + 2}:M${idx + 2}`, [["missing"]]);
+    return { ok: true as const };
+  });
+
 export type Supplier = { id: string; name: string; phone: string };
 
 export const getSuppliers = createServerFn({ method: "GET" })

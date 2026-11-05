@@ -32,6 +32,14 @@ describe("transaction filters", () => {
   });
 });
 
+describe("missing review status", () => {
+  it("allows pending transactions but never confirmed ones", () => {
+    expect(canMarkMissing("pending")).toBe(true);
+    expect(canMarkMissing("missing")).toBe(true);
+    expect(canMarkMissing(" confirmed ")).toBe(false);
+  });
+});
+
 describe("SMS mismatch", () => {
   it("flags different amount and wallet", () => {
     expect(findMismatches({ amount: 2000, wallet: "instapay" }, { amount: 1500, wallet: "cash" }).map((m) => m.field)).toEqual(["amount", "wallet"]);
