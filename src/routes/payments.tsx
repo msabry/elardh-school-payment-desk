@@ -243,6 +243,45 @@ function PaymentsPage() {
 
         {!signedOut && suppliers && !done && (
           <div className="space-y-4">
+            <div>
+              <label className={labelCls}>رسالة التأكيد (اختياري — للتعبئة التلقائية)</label>
+              <textarea
+                value={sms}
+                onChange={(e) => {
+                  setSms(e.target.value);
+                  setExt(null);
+                }}
+                placeholder="الصق رسالة التحويل هنا ليملأ التطبيق الحقول…"
+                rows={4}
+                className={inputCls + " resize-none"}
+              />
+              <button
+                type="button"
+                onClick={readSms}
+                disabled={reading || !sms.trim()}
+                className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-primary px-4 py-2.5 text-sm font-medium text-primary disabled:opacity-50"
+              >
+                {reading && <Loader2 className="h-4 w-4 animate-spin" />}
+                قراءة الرسالة وتعبئة الحقول
+              </button>
+            </div>
+
+            {ext && (
+              <SmartReadResult
+                ext={ext}
+                customers={suppliers}
+                selectedCustomerId={supplier?.id}
+                onPickCustomer={(s) => setSupplier({ id: s.id, name: s.name })}
+                suggestionsTitle="المورّد المقترح:"
+                noSuggestionsText="لم نجد مورّداً بنفس الرقم أو الاسم"
+                problems={mismatches.map((m) =>
+                  m.field === "amount"
+                    ? `المبلغ مختلف: الرسالة ${m.sms} والمُدخل ${m.entered}`
+                    : `المحفظة مختلفة: الرسالة ${WALLET_LABELS[m.sms]} والمُختارة ${WALLET_LABELS[m.entered]}`,
+                )}
+              />
+            )}
+
             <EntityPicker
               label="المورّد"
               items={suppliers}
