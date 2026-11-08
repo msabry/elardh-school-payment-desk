@@ -282,35 +282,55 @@ function ReviewPage() {
                   </a>
                 )}
 
-                {t.status === "confirmed" ? (
-                  <p className="mt-4 flex items-center justify-center gap-1.5 rounded-xl bg-accent px-4 py-2.5 text-sm font-medium text-accent-foreground">
-                    <BadgeCheck className="h-4 w-4" /> مؤكد
+                {t.status === "confirmed" || t.status === "missing" ? (
+                  <p className={
+                    "mt-4 flex items-center justify-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-medium " +
+                    (t.status === "confirmed"
+                      ? "bg-accent text-accent-foreground"
+                      : "bg-destructive/10 text-destructive")
+                  }>
+                    {t.status === "confirmed" ? <BadgeCheck className="h-4 w-4" /> : <CircleAlert className="h-4 w-4" />}
+                    {t.status === "confirmed" ? "مؤكد" : "مفقود"}
                     {t.notes ? ` — ${t.notes}` : ""}
                   </p>
                 ) : (
-                <>
-                {load.isAcc1 && load.master && (
-                  <AccountantEdits
-                    t={t}
-                    master={load.master}
-                    value={editOf(t)}
-                    onChange={(p) => setEdit(t, p)}
-                  />
-                )}
+                  <>
+                    {load.isAcc1 && load.master && (
+                      <AccountantEdits
+                        t={t}
+                        master={load.master}
+                        value={editOf(t)}
+                        onChange={(p) => setEdit(t, p)}
+                      />
+                    )}
 
-                <button
-                  onClick={() => confirm(t)}
-                  disabled={confirming !== null}
-                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-60"
-                >
-                  {confirming === t.transactionId ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <BadgeCheck className="h-4 w-4" />
-                  )}
-                  تأكيد
-                </button>
-                </>
+                    <div className="mt-4 grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => confirm(t)}
+                        disabled={confirming !== null}
+                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-3 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+                      >
+                        {confirming === t.transactionId ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <BadgeCheck className="h-4 w-4" />
+                        )}
+                        تأكيد
+                      </button>
+                      <button
+                        onClick={() => markMissing(t)}
+                        disabled={confirming !== null}
+                        className="flex w-full items-center justify-center gap-2 rounded-xl border border-destructive bg-card px-3 py-2.5 text-sm font-semibold text-destructive disabled:opacity-60"
+                      >
+                        {confirming === t.transactionId ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <CircleAlert className="h-4 w-4" />
+                        )}
+                        مفقود
+                      </button>
+                    </div>
+                  </>
                 )}
               </div>
             ))}

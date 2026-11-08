@@ -178,6 +178,9 @@ function PaymentsPage() {
     setExpenseItem("");
     setAmount("");
     setReference("");
+    setWallet("");
+    setSms("");
+    setExt(null);
     setReceipt(null);
     setDone(null);
   }
