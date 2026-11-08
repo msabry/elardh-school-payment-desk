@@ -150,6 +150,29 @@ function ReviewPage() {
     }
   }
 
+  async function markMissing(t: ReviewTransaction) {
+    setConfirming(t.transactionId);
+    try {
+      await markTransactionMissing({ data: { transactionId: t.transactionId } });
+      toast.success("تم تعليم العملية كمفقودة");
+      setLoad((prev) =>
+        prev.state === "ready"
+          ? {
+              ...prev,
+              items: prev.items.map((x) =>
+                x.transactionId === t.transactionId ? { ...x, status: "missing" } : x,
+              ),
+            }
+          : prev,
+      );
+    } catch (e) {
+      console.error(e);
+      toast.error(e instanceof Error ? e.message : "لم نتمكن من تعليم العملية كمفقودة");
+    } finally {
+      setConfirming(null);
+    }
+  }
+
   return (
     <div dir="rtl" className="min-h-screen bg-background">
       <div className="mx-auto flex min-h-screen w-full max-w-md flex-col px-4 pb-10">
@@ -259,35 +282,55 @@ function ReviewPage() {
                   </a>
                 )}
 
-                {t.status === "confirmed" ? (
-                  <p className="mt-4 flex items-center justify-center gap-1.5 rounded-xl bg-accent px-4 py-2.5 text-sm font-medium text-accent-foreground">
-                    <BadgeCheck className="h-4 w-4" /> مؤكد
+                {t.status === "confirmed" || t.status === "missing" ? (
+                  <p className={
+                    "mt-4 flex items-center justify-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-medium " +
+                    (t.status === "confirmed"
+                      ? "bg-accent text-accent-foreground"
+                      : "bg-destructive/10 text-destructive")
+                  }>
+                    {t.status === "confirmed" ? <BadgeCheck className="h-4 w-4" /> : <CircleAlert className="h-4 w-4" />}
+                    {t.status === "confirmed" ? "مؤكد" : "مفقود"}
                     {t.notes ? ` — ${t.notes}` : ""}
                   </p>
                 ) : (
-                <>
-                {load.isAcc1 && load.master && (
-                  <AccountantEdits
-                    t={t}
-                    master={load.master}
-                    value={editOf(t)}
-                    onChange={(p) => setEdit(t, p)}
-                  />
-                )}
+                  <>
+                    {load.isAcc1 && load.master && (
+                      <AccountantEdits
+                        t={t}
+                        master={load.master}
+                        value={editOf(t)}
+                        onChange={(p) => setEdit(t, p)}
+                      />
+                    )}
 
-                <button
-                  onClick={() => confirm(t)}
-                  disabled={confirming !== null}
-                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-60"
-                >
-                  {confirming === t.transactionId ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <BadgeCheck className="h-4 w-4" />
-                  )}
-                  تأكيد
-                </button>
-                </>
+                    <div className="mt-4 grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => confirm(t)}
+                        disabled={confirming !== null}
+                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-3 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+                      >
+                        {confirming === t.transactionId ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <BadgeCheck className="h-4 w-4" />
+                        )}
+                        تأكيد
+                      </button>
+                      <button
+                        onClick={() => markMissing(t)}
+                        disabled={confirming !== null}
+                        className="flex w-full items-center justify-center gap-2 rounded-xl border border-destructive bg-card px-3 py-2.5 text-sm font-semibold text-destructive disabled:opacity-60"
+                      >
+                        {confirming === t.transactionId ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <CircleAlert className="h-4 w-4" />
+                        )}
+                        مفقود
+                      </button>
+                    </div>
+                  </>
                 )}
               </div>
             ))}

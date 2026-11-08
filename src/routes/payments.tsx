@@ -159,6 +159,8 @@ function PaymentsPage() {
           expenseItem: expenseItem.trim(),
           amount: amt,
           transferReference: reference.trim(),
+          ...(sms.trim() ? { smsText: sms.trim() } : {}),
+          ...(wallet ? { wallet } : {}),
           ...(receiptPayload ? { receipt: receiptPayload } : {}),
         },
       });
@@ -176,6 +178,9 @@ function PaymentsPage() {
     setExpenseItem("");
     setAmount("");
     setReference("");
+    setWallet("");
+    setSms("");
+    setExt(null);
     setReceipt(null);
     setDone(null);
   }
@@ -238,6 +243,45 @@ function PaymentsPage() {
 
         {!signedOut && suppliers && !done && (
           <div className="space-y-4">
+            <div>
+              <label className={labelCls}>رسالة التأكيد (اختياري — للتعبئة التلقائية)</label>
+              <textarea
+                value={sms}
+                onChange={(e) => {
+                  setSms(e.target.value);
+                  setExt(null);
+                }}
+                placeholder="الصق رسالة التحويل هنا ليملأ التطبيق الحقول…"
+                rows={4}
+                className={inputCls + " resize-none"}
+              />
+              <button
+                type="button"
+                onClick={readSms}
+                disabled={reading || !sms.trim()}
+                className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-primary px-4 py-2.5 text-sm font-medium text-primary disabled:opacity-50"
+              >
+                {reading && <Loader2 className="h-4 w-4 animate-spin" />}
+                قراءة الرسالة وتعبئة الحقول
+              </button>
+            </div>
+
+            {ext && (
+              <SmartReadResult
+                ext={ext}
+                customers={suppliers}
+                selectedCustomerId={supplier?.id}
+                onPickCustomer={(s) => setSupplier({ id: s.id, name: s.name })}
+                suggestionsTitle="المورّد المقترح:"
+                noSuggestionsText="لم نجد مورّداً بنفس الرقم أو الاسم"
+                problems={mismatches.map((m) =>
+                  m.field === "amount"
+                    ? `المبلغ مختلف: الرسالة ${m.sms} والمُدخل ${m.entered}`
+                    : `المحفظة مختلفة: الرسالة ${WALLET_LABELS[m.sms]} والمُختارة ${WALLET_LABELS[m.entered]}`,
+                )}
+              />
+            )}
+
             <EntityPicker
               label="المورّد"
               items={suppliers}
@@ -268,6 +312,27 @@ function PaymentsPage() {
                 placeholder="0.00"
                 className={inputCls}
               />
+            </div>
+
+            <div>
+              <label className={labelCls}>المحفظة (اختياري)</label>
+              <div className="grid grid-cols-3 gap-2">
+                {Object.entries(WALLET_LABELS).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setWallet(value)}
+                    className={
+                      "rounded-xl border px-2 py-2.5 text-sm font-medium " +
+                      (wallet === value
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-input bg-card text-foreground")
+                    }
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div>
