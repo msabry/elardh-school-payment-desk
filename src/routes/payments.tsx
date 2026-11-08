@@ -315,6 +315,27 @@ function PaymentsPage() {
             </div>
 
             <div>
+              <label className={labelCls}>المحفظة (اختياري)</label>
+              <div className="grid grid-cols-3 gap-2">
+                {Object.entries(WALLET_LABELS).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setWallet(value)}
+                    className={
+                      "rounded-xl border px-2 py-2.5 text-sm font-medium " +
+                      (wallet === value
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-input bg-card text-foreground")
+                    }
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
               <label className={labelCls}>مرجع التحويل</label>
               <input
                 value={reference}
