@@ -159,6 +159,8 @@ function PaymentsPage() {
           expenseItem: expenseItem.trim(),
           amount: amt,
           transferReference: reference.trim(),
+          ...(sms.trim() ? { smsText: sms.trim() } : {}),
+          ...(wallet ? { wallet } : {}),
           ...(receiptPayload ? { receipt: receiptPayload } : {}),
         },
       });

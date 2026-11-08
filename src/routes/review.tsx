@@ -150,6 +150,29 @@ function ReviewPage() {
     }
   }
 
+  async function markMissing(t: ReviewTransaction) {
+    setConfirming(t.transactionId);
+    try {
+      await markTransactionMissing({ data: { transactionId: t.transactionId } });
+      toast.success("تم تعليم العملية كمفقودة");
+      setLoad((prev) =>
+        prev.state === "ready"
+          ? {
+              ...prev,
+              items: prev.items.map((x) =>
+                x.transactionId === t.transactionId ? { ...x, status: "missing" } : x,
+              ),
+            }
+          : prev,
+      );
+    } catch (e) {
+      console.error(e);
+      toast.error(e instanceof Error ? e.message : "لم نتمكن من تعليم العملية كمفقودة");
+    } finally {
+      setConfirming(null);
+    }
+  }
+
   return (
     <div dir="rtl" className="min-h-screen bg-background">
       <div className="mx-auto flex min-h-screen w-full max-w-md flex-col px-4 pb-10">
