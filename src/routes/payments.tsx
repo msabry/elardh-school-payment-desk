@@ -131,6 +131,10 @@ function PaymentsPage() {
       toast.error("أدخل مبلغاً صحيحاً");
       return;
     }
+    if (!wallet) {
+      toast.error("اختر المحفظة");
+      return;
+    }
     if (!reference.trim()) {
       toast.error("أدخل مرجع التحويل");
       return;
@@ -160,7 +164,7 @@ function PaymentsPage() {
           amount: amt,
           transferReference: reference.trim(),
           ...(sms.trim() ? { smsText: sms.trim() } : {}),
-          ...(wallet ? { wallet } : {}),
+          wallet,
           ...(receiptPayload ? { receipt: receiptPayload } : {}),
         },
       });
@@ -315,7 +319,7 @@ function PaymentsPage() {
             </div>
 
             <div>
-              <label className={labelCls}>المحفظة (اختياري)</label>
+              <label className={labelCls}>المحفظة</label>
               <div className="grid grid-cols-3 gap-2">
                 {Object.entries(WALLET_LABELS).map(([value, label]) => (
                   <button
