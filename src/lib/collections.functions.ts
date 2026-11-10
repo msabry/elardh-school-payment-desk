@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { canMarkMissing, isUsableMasterRow, normalizeEnrollments, type Enrollment } from "./filters";
+import { canMarkMissing, isUsableMasterRow, isValidWallet, normalizeEnrollments, type Enrollment } from "./filters";
 
 
 
@@ -75,7 +75,7 @@ export const submitCollection = createServerFn({ method: "POST" })
   .inputValidator((input: SubmitInput) => {
     if (!input.customerId || !input.customerName) throw new Error("Customer is required");
     if (!input.amount || input.amount <= 0) throw new Error("Amount must be greater than zero");
-    if (!input.wallet || !["instapay", "vodaphone", "cash"].includes(input.wallet)) {
+    if (!isValidWallet(input.wallet)) {
       throw new Error("Wallet is required");
     }
     if (input.receipt && input.receipt.dataBase64.length > 7_000_000) {
@@ -250,7 +250,7 @@ type SubmitPaymentInput = {
   amount: number;
   transferReference?: string;
   smsText?: string;
-  wallet?: string;
+  wallet: string;
   receipt?: { name: string; mimeType: string; dataBase64: string };
 };
 
@@ -260,8 +260,8 @@ export const submitPayment = createServerFn({ method: "POST" })
     if (!input.supplierId || !input.supplierName) throw new Error("Supplier is required");
     if (!input.expenseItem?.trim()) throw new Error("Expense item is required");
     if (!input.amount || input.amount <= 0) throw new Error("Amount must be greater than zero");
-    if (input.wallet && !["instapay", "vodaphone", "cash"].includes(input.wallet)) {
-      throw new Error("Wallet is invalid");
+    if (!isValidWallet(input.wallet)) {
+      throw new Error("Wallet is required");
     }
     if (input.receipt && input.receipt.dataBase64.length > 7_000_000) {
       throw new Error("Receipt file is too large (max ~5 MB)");
@@ -303,7 +303,7 @@ export const submitPayment = createServerFn({ method: "POST" })
       data.smsText ?? "",
       receiptFileId,
       recordedBy,
-      data.wallet ?? "",
+      data.wallet,
       "pending",
       "supplier payment",
       "",
