@@ -2,23 +2,26 @@ import { describe, expect, it } from "vitest";
 import {
   activeProgramIds,
   applyFilters,
+  cairoDateString,
   canMarkMissing,
   emptyFilters,
   findMismatches,
   isProgramActive,
   isSupplierPayment,
   isUsableMasterRow,
+  isValidTransactionDate,
   isValidWallet,
   normalizeEnrollments,
   normalizePhone,
   pickActiveEnrollment,
   suggestCustomers,
   parseEnrollmentId,
+  transactionDay,
 } from "@/lib/filters";
 
 const items = [
-  { id: 1, wallet: "instapay", status: "pending", date: "2026-10-26T14:35:34.143Z" },
-  { id: 2, wallet: "vodaphone", status: "confirmed", date: "2026-10-28T13:56:53.019Z" },
+  { id: 1, wallet: "instapay", status: "pending", transactionDate: "2026-10-26", recordDate: "2026-10-28T13:56:53.019Z" },
+  { id: 2, wallet: "vodaphone", status: "confirmed", transactionDate: "2026-10-28", recordDate: "2026-10-26T14:35:34.143Z" },
 ];
 
 describe("transaction filters", () => {
@@ -28,8 +31,22 @@ describe("transaction filters", () => {
   it("filters by status", () => {
     expect(applyFilters(items, { ...emptyFilters, status: "pending" }).map((i) => i.id)).toEqual([1]);
   });
-  it("date range is inclusive", () => {
+  it("date range is inclusive and uses transaction_date, not record_date", () => {
     expect(applyFilters(items, { ...emptyFilters, from: "2026-10-28", to: "2026-10-28" }).map((i) => i.id)).toEqual([2]);
+  });
+});
+
+describe("transaction and record dates", () => {
+  it("accepts a manually selected calendar date", () => {
+    expect(isValidTransactionDate("2026-09-15")).toBe(true);
+  });
+  it("rejects missing and impossible transaction dates", () => {
+    expect(isValidTransactionDate("")).toBe(false);
+    expect(isValidTransactionDate("2026-02-30")).toBe(false);
+  });
+  it("derives an existing row's transaction date from its record timestamp in Cairo", () => {
+    expect(transactionDay("2026-11-10T22:30:00.000Z")).toBe("2026-11-11");
+    expect(cairoDateString(new Date("2026-11-10T22:30:00.000Z"))).toBe("2026-11-11");
   });
 });
 
@@ -64,7 +81,7 @@ describe("SMS mismatch", () => {
   });
 });
 
-describe("transaction type (column N)", () => {
+describe("transaction type (column O)", () => {
   it("treats supplier payment rows as payments", () => {
     expect(isSupplierPayment("supplier payment")).toBe(true);
     expect(isSupplierPayment(" Supplier Payment ")).toBe(true);

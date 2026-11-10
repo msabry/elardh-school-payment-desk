@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { activeProgramIds, findMismatches, pickActiveEnrollment } from "@/lib/filters";
+import { activeProgramIds, cairoDateString, findMismatches, isValidTransactionDate, pickActiveEnrollment } from "@/lib/filters";
 import { SmartReadResult, customerSuggestions, type Extraction } from "@/components/smart-read";
 import { toast } from "sonner";
 import { BadgeCheck, Banknote, ListChecks, Loader2, LogOut, Paperclip, Search, Wallet } from "lucide-react";
@@ -331,6 +331,7 @@ function Accountant1Form({ master }: { master: MasterData }) {
   const [kidId, setKidId] = useState("");
   const [programId, setProgramId] = useState("");
   const [amount, setAmount] = useState("");
+  const [transactionDate, setTransactionDate] = useState(() => cairoDateString());
   const [reference, setReference] = useState("");
   const [wallet, setWallet] = useState("");
   const [sms, setSms] = useState("");
@@ -390,6 +391,7 @@ function Accountant1Form({ master }: { master: MasterData }) {
     setKidId("");
     setProgramId("");
     setAmount("");
+    setTransactionDate(cairoDateString());
     setReference("");
     setWallet("");
     setSms("");
@@ -414,6 +416,10 @@ function Accountant1Form({ master }: { master: MasterData }) {
     const amt = Number(amount);
     if (!amt || amt <= 0) {
       toast.error("أدخل مبلغاً صحيحاً");
+      return;
+    }
+    if (!isValidTransactionDate(transactionDate)) {
+      toast.error("أدخل تاريخ العملية");
       return;
     }
     if (!wallet) {
@@ -450,6 +456,7 @@ function Accountant1Form({ master }: { master: MasterData }) {
           kidName: kid?.name ?? "",
           programName: program?.name ?? "",
           amount: amt,
+          transactionDate,
           transferReference: reference.trim(),
           wallet,
           ...(sms.trim() ? { smsText: sms.trim() } : {}),
@@ -509,6 +516,17 @@ function Accountant1Form({ master }: { master: MasterData }) {
           setProgramId("");
         }}
       />
+
+      <div>
+        <label className={labelCls}>تاريخ العملية</label>
+        <input
+          type="date"
+          required
+          value={transactionDate}
+          onChange={(e) => setTransactionDate(e.target.value)}
+          className={inputCls}
+        />
+      </div>
 
       <div>
         <label className={labelCls}>الطفل</label>
@@ -602,6 +620,7 @@ function Accountant1Form({ master }: { master: MasterData }) {
 function Accountant2Form({ master }: { master: MasterData }) {
   const [customer, setCustomer] = useState<{ id: string; name: string } | null>(null);
   const [amount, setAmount] = useState("");
+  const [transactionDate, setTransactionDate] = useState(() => cairoDateString());
   const [sms, setSms] = useState("");
   const [wallet, setWallet] = useState("");
   const [busy, setBusy] = useState(false);
@@ -639,6 +658,7 @@ function Accountant2Form({ master }: { master: MasterData }) {
         onReset={() => {
           setCustomer(null);
           setAmount("");
+          setTransactionDate(cairoDateString());
           setSms("");
           setWallet("");
           setCheck(null);
@@ -658,6 +678,10 @@ function Accountant2Form({ master }: { master: MasterData }) {
       toast.error("أدخل مبلغاً صحيحاً");
       return;
     }
+    if (!isValidTransactionDate(transactionDate)) {
+      toast.error("أدخل تاريخ العملية");
+      return;
+    }
     if (!wallet) {
       toast.error("اختر المحفظة");
       return;
@@ -674,6 +698,7 @@ function Accountant2Form({ master }: { master: MasterData }) {
           customerId: customer.id,
           customerName: customer.name,
           amount: amt,
+          transactionDate,
           smsText: sms.trim(),
           wallet,
         },
@@ -690,6 +715,17 @@ function Accountant2Form({ master }: { master: MasterData }) {
   return (
     <div className="space-y-4">
       <CustomerPicker customers={master.customers} value={customer} onChange={setCustomer} />
+
+      <div>
+        <label className={labelCls}>تاريخ العملية</label>
+        <input
+          type="date"
+          required
+          value={transactionDate}
+          onChange={(e) => setTransactionDate(e.target.value)}
+          className={inputCls}
+        />
+      </div>
 
       <div>
         <label className={labelCls}>المبلغ المحصل</label>
