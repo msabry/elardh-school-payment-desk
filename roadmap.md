@@ -15,3 +15,4 @@
 - [x] Story 4: child's current course = enrolled course whose Programs Status says Active; pre-selected on home + review (verified in preview as Accountant 1)
 - [x] Review: mark unconfirmed transactions "missing"; show/filter the new status (verified end-to-end)
 - [x] Supplier payments: SMS reading fills amount/wallet/reference, suggests supplier, and saves SMS/wallet (verified end-to-end)
+- [ ] Transactions: editable transaction_date (default today), automatic record_date timestamp, existing rows backfilled

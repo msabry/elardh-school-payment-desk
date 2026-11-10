@@ -2,7 +2,36 @@ export type TxFilters = { wallet: string; status: string; from: string; to: stri
 
 export const emptyFilters: TxFilters = { wallet: "", status: "", from: "", to: "" };
 
-/** Wallets the app accepts, saved verbatim in column L of Transactions. */
+/** Current calendar date in Cairo, in the format used by date inputs and the sheet. */
+export function cairoDateString(date = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Africa/Cairo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((p) => p.type === type)?.value ?? "";
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
+
+/** Transaction dates are calendar dates, not timestamps. */
+export function isValidTransactionDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+}
+
+/** Normalize a transaction date, falling back to a legacy record timestamp. */
+export function transactionDay(value: string): string {
+  const trimmed = value.trim();
+  if (isValidTransactionDate(trimmed)) return trimmed;
+  if (!trimmed) return "";
+  const parsed = new Date(trimmed);
+  return Number.isNaN(parsed.getTime()) ? "" : cairoDateString(parsed);
+}
+
+/** Wallets the app accepts, saved verbatim in column M of Transactions. */
 export const WALLET_VALUES = ["instapay", "vodaphone", "cash"] as const;
 
 /** Every collection and supplier payment must say which wallet it went through. */
@@ -12,8 +41,8 @@ export const isValidWallet = (wallet: string | undefined | null) =>
 /** Confirmed transactions are final; every other status can be marked missing. */
 export const canMarkMissing = (status: string) => status.trim().toLowerCase() !== "confirmed";
 
-/** Filter by wallet, status and inclusive date range (YYYY-MM-DD, Cairo-local date). */
-export function applyFilters<T extends { wallet: string; status: string; date: string }>(
+/** Filter by wallet, status and inclusive transaction_date range (YYYY-MM-DD). */
+export function applyFilters<T extends { wallet: string; status: string; transactionDate: string }>(
   items: T[],
   f: TxFilters,
 ): T[] {
@@ -21,9 +50,8 @@ export function applyFilters<T extends { wallet: string; status: string; date: s
     if (f.wallet && t.wallet.trim().toLowerCase() !== f.wallet) return false;
     if (f.status && t.status !== f.status) return false;
     if (f.from || f.to) {
-      const d = new Date(t.date);
-      if (Number.isNaN(d.getTime())) return false;
-      const day = d.toLocaleDateString("en-CA", { timeZone: "Africa/Cairo" });
+      const day = transactionDay(t.transactionDate);
+      if (!day) return false;
       if (f.from && day < f.from) return false;
       if (f.to && day > f.to) return false;
     }
@@ -48,8 +76,8 @@ export function findMismatches(
 }
 
 /**
- * Column N of Transactions holds the transaction type. Supplier payments carry
- * a supplier id in column C (customer_supplier_id) instead of a customer id.
+ * Column O of Transactions holds the transaction type. Supplier payments carry
+ * a supplier id in column D (customer_supplier_id) instead of a customer id.
  */
 export const isSupplierPayment = (transactionType: string) =>
   transactionType.trim().toLowerCase().includes("supplier");
