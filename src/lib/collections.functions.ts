@@ -1,6 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { canMarkMissing, isUsableMasterRow, isValidWallet, normalizeEnrollments, type Enrollment } from "./filters";
+import {
+  canMarkMissing,
+  isUsableMasterRow,
+  isValidTransactionDate,
+  isValidWallet,
+  normalizeEnrollments,
+  transactionDay,
+  type Enrollment,
+} from "./filters";
 
 
 
@@ -64,6 +72,7 @@ type SubmitInput = {
   kidName?: string;
   programName?: string;
   amount: number;
+  transactionDate: string;
   transferReference?: string;
   smsText?: string;
   wallet?: string;
@@ -100,14 +109,15 @@ export const submitCollection = createServerFn({ method: "POST" })
       .toString(36)
       .slice(2, 6)
       .toUpperCase()}`;
-    const date = new Date().toISOString();
+    const recordDate = new Date().toISOString();
     const recordedBy = (context.claims.email as string | undefined) ?? context.userId;
 
-    // C = customer_supplier_id (the customer id here), L = wallet,
-    // M = review status, N = transaction_type, O = notes.
-    await gw.appendRow("Transactions!A1:O1", [
+    // B = automatic record_date, C = user-editable transaction_date,
+    // D = customer_supplier_id, M = wallet, N = status, O = type, P = notes.
+    await gw.appendRow("Transactions!A1:P1", [
       transactionId,
-      date,
+      recordDate,
+      data.transactionDate,
       data.customerId,
       data.customerName,
       data.kidName ?? "",
@@ -123,12 +133,13 @@ export const submitCollection = createServerFn({ method: "POST" })
       "",
     ]);
 
-    return { transactionId, date, receiptFileId };
+    return { transactionId, recordDate, transactionDate: data.transactionDate, receiptFileId };
   });
 
 export type ReviewTransaction = {
   transactionId: string;
-  date: string;
+  recordDate: string;
+  transactionDate: string;
   customerId: string;
   customerName: string;
   wallet: string;
@@ -149,29 +160,30 @@ export const getTransactionsForReview = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const myEmail = (context.claims.email as string | undefined)?.toLowerCase() ?? "";
     const gw = await import("./google-gateway");
-    // Columns: A transaction_id, B date, C customer_supplier_id (customer id for
-    // customer collections, supplier id for supplier payments), D customer_name,
-    // E kid_name, F program_name, G amount, H transfer_reference, I sms_text,
-    // J receipt_file_id, K recorded_by, L wallet, M status, N transaction_type, O notes.
-    const rows = await gw.getValues("Transactions!A2:O1000");
+    // A transaction_id, B record_date, C transaction_date,
+    // D customer_supplier_id, E customer_name, F kid_name, G program_name,
+    // H amount, I transfer_reference, J sms_text, K receipt_file_id,
+    // L recorded_by, M wallet, N status, O transaction_type, P notes.
+    const rows = await gw.getValues("Transactions!A2:P1000");
     return rows
-      .filter((r) => r[0] && (r[10] ?? "").trim().toLowerCase() !== myEmail)
+      .filter((r) => r[0] && (r[11] ?? "").trim().toLowerCase() !== myEmail)
       .map((r) => ({
         transactionId: r[0]!,
-        date: r[1] ?? "",
-        customerId: r[2] ?? "",
-        customerName: r[3] ?? "",
-        wallet: r[11] ?? "",
-        notes: r[14] ?? "",
-        status: ((r[12] ?? "") || "pending").trim().toLowerCase(),
-        kidName: r[4] ?? "",
-        programName: r[5] ?? "",
-        amount: r[6] ?? "",
-        transferReference: r[7] ?? "",
-        smsText: r[8] ?? "",
-        receiptFileId: r[9] ?? "",
-        recordedBy: r[10] ?? "",
-        transactionType: (r[13] ?? "").trim().toLowerCase(),
+        recordDate: r[1] ?? "",
+        transactionDate: (r[2] ?? "").trim() || transactionDay(r[1] ?? ""),
+        customerId: r[3] ?? "",
+        customerName: r[4] ?? "",
+        wallet: r[12] ?? "",
+        notes: r[15] ?? "",
+        status: ((r[13] ?? "") || "pending").trim().toLowerCase(),
+        kidName: r[5] ?? "",
+        programName: r[6] ?? "",
+        amount: r[7] ?? "",
+        transferReference: r[8] ?? "",
+        smsText: r[9] ?? "",
+        receiptFileId: r[10] ?? "",
+        recordedBy: r[11] ?? "",
+        transactionType: (r[14] ?? "").trim().toLowerCase(),
       }));
   });
 
@@ -186,22 +198,22 @@ export const confirmTransaction = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const myEmail = (context.claims.email as string | undefined)?.toLowerCase() ?? "";
     const gw = await import("./google-gateway");
-    const rows = await gw.getValues("Transactions!A2:O1000");
+    const rows = await gw.getValues("Transactions!A2:P1000");
     const idx = rows.findIndex((r) => r[0] === data.transactionId);
     if (idx < 0) throw new Error("Transaction not found");
-    const recordedBy = (rows[idx]?.[10] ?? "").trim().toLowerCase();
+    const recordedBy = (rows[idx]?.[11] ?? "").trim().toLowerCase();
     if (recordedBy === myEmail) {
       throw new Error("You can only review transactions submitted by the other accountant");
     }
     const row = idx + 2;
     if (data.kidName !== undefined || data.programName !== undefined) {
-      await gw.updateValues(`Transactions!E${row}:F${row}`, [
-        [data.kidName ?? rows[idx]?.[4] ?? "", data.programName ?? rows[idx]?.[5] ?? ""],
+      await gw.updateValues(`Transactions!F${row}:G${row}`, [
+        [data.kidName ?? rows[idx]?.[5] ?? "", data.programName ?? rows[idx]?.[6] ?? ""],
       ]);
     }
-    await gw.updateValues(`Transactions!M${row}:M${row}`, [["confirmed"]]);
-    await gw.updateValues(`Transactions!O${row}:O${row}`, [
-      [data.notes ?? rows[idx]?.[14] ?? ""],
+    await gw.updateValues(`Transactions!N${row}:N${row}`, [["confirmed"]]);
+    await gw.updateValues(`Transactions!P${row}:P${row}`, [
+      [data.notes ?? rows[idx]?.[15] ?? ""],
     ]);
     return { ok: true as const };
   });
@@ -215,17 +227,17 @@ export const markTransactionMissing = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const myEmail = (context.claims.email as string | undefined)?.toLowerCase() ?? "";
     const gw = await import("./google-gateway");
-    const rows = await gw.getValues("Transactions!A2:O1000");
+    const rows = await gw.getValues("Transactions!A2:P1000");
     const idx = rows.findIndex((r) => r[0] === data.transactionId);
     if (idx < 0) throw new Error("Transaction not found");
-    const recordedBy = (rows[idx]?.[10] ?? "").trim().toLowerCase();
+    const recordedBy = (rows[idx]?.[11] ?? "").trim().toLowerCase();
     if (recordedBy === myEmail) {
       throw new Error("You can only review transactions submitted by the other accountant");
     }
-    if (!canMarkMissing(((rows[idx]?.[12] ?? "") || "pending").trim().toLowerCase())) {
+    if (!canMarkMissing(((rows[idx]?.[13] ?? "") || "pending").trim().toLowerCase())) {
       throw new Error("Confirmed transactions cannot be marked missing");
     }
-    await gw.updateValues(`Transactions!M${idx + 2}:M${idx + 2}`, [["missing"]]);
+    await gw.updateValues(`Transactions!N${idx + 2}:N${idx + 2}`, [["missing"]]);
     return { ok: true as const };
   });
 
@@ -248,6 +260,7 @@ type SubmitPaymentInput = {
   supplierName: string;
   expenseItem: string;
   amount: number;
+  transactionDate: string;
   transferReference?: string;
   smsText?: string;
   wallet: string;
@@ -260,6 +273,9 @@ export const submitPayment = createServerFn({ method: "POST" })
     if (!input.supplierId || !input.supplierName) throw new Error("Supplier is required");
     if (!input.expenseItem?.trim()) throw new Error("Expense item is required");
     if (!input.amount || input.amount <= 0) throw new Error("Amount must be greater than zero");
+    if (!isValidTransactionDate(input.transactionDate)) {
+      throw new Error("A valid transaction date is required");
+    }
     if (!isValidWallet(input.wallet)) {
       throw new Error("Wallet is required");
     }
@@ -285,15 +301,16 @@ export const submitPayment = createServerFn({ method: "POST" })
       .toString(36)
       .slice(2, 6)
       .toUpperCase()}`;
-    const date = new Date().toISOString();
+    const recordDate = new Date().toISOString();
     const recordedBy = (context.claims.email as string | undefined) ?? context.userId;
 
     // Supplier payments live in the Transactions tab as negative amounts.
-    // C holds the supplier id (customer_supplier_id), D the supplier name,
-    // F the expense item, N = transaction_type.
-    await gw.appendRow("Transactions!A1:O1", [
+    // B = record_date, C = transaction_date, D = supplier id,
+    // E = supplier name, G = expense item, O = transaction_type.
+    await gw.appendRow("Transactions!A1:P1", [
       paymentId,
-      date,
+      recordDate,
+      data.transactionDate,
       data.supplierId,
       data.supplierName,
       "",
@@ -309,7 +326,7 @@ export const submitPayment = createServerFn({ method: "POST" })
       "",
     ]);
 
-    return { paymentId, date, receiptFileId };
+    return { paymentId, recordDate, transactionDate: data.transactionDate, receiptFileId };
   });
 
 export const analyzeSms = createServerFn({ method: "POST" })
@@ -340,12 +357,12 @@ export const analyzeScreenshot = createServerFn({ method: "POST" })
     if (data.transactionId) {
       try {
         const gw = await import("./google-gateway");
-        const rows = await gw.getValues("Transactions!A2:J1000");
+        const rows = await gw.getValues("Transactions!A2:K1000");
         const idx = rows.findIndex((r) => r[0] === data.transactionId);
-        if (idx >= 0 && !(rows[idx]?.[9] ?? "").trim()) {
+        if (idx >= 0 && !(rows[idx]?.[10] ?? "").trim()) {
           const safeName = data.image.name.replace(/[^\w.\- ]/g, "_");
           const fileId = await gw.uploadReceipt(`${Date.now()}-${safeName}`, data.image.mimeType, data.image.dataBase64);
-          await gw.updateValues(`Transactions!J${idx + 2}:J${idx + 2}`, [[fileId]]);
+          await gw.updateValues(`Transactions!K${idx + 2}:K${idx + 2}`, [[fileId]]);
         }
       } catch (e) {
         console.error("Saving screenshot failed", e);
@@ -356,7 +373,8 @@ export const analyzeScreenshot = createServerFn({ method: "POST" })
 
 export type TransactionRow = {
   transactionId: string;
-  date: string;
+  recordDate: string;
+  transactionDate: string;
   customerName: string;
   kidName: string;
   programName: string;
@@ -373,22 +391,23 @@ export const getAllTransactions = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async (): Promise<TransactionRow[]> => {
     const gw = await import("./google-gateway");
-    const rows = await gw.getValues("Transactions!A2:O1000");
+    const rows = await gw.getValues("Transactions!A2:P1000");
     return rows
       .filter((r) => r[0])
       .map((r) => ({
         transactionId: r[0]!,
-        date: r[1] ?? "",
-        customerName: r[3] ?? "",
-        kidName: r[4] ?? "",
-        programName: r[5] ?? "",
-        amount: r[6] ?? "",
-        transferReference: r[7] ?? "",
-        wallet: r[11] ?? "",
-        status: ((r[12] ?? "") || "pending").trim().toLowerCase(),
-        recordedBy: r[10] ?? "",
-        notes: r[14] ?? "",
-        transactionType: (r[13] ?? "").trim().toLowerCase(),
+        recordDate: r[1] ?? "",
+        transactionDate: (r[2] ?? "").trim() || transactionDay(r[1] ?? ""),
+        customerName: r[4] ?? "",
+        kidName: r[5] ?? "",
+        programName: r[6] ?? "",
+        amount: r[7] ?? "",
+        transferReference: r[8] ?? "",
+        wallet: r[12] ?? "",
+        status: ((r[13] ?? "") || "pending").trim().toLowerCase(),
+        recordedBy: r[11] ?? "",
+        notes: r[15] ?? "",
+        transactionType: (r[14] ?? "").trim().toLowerCase(),
       }))
       .reverse();
   });
