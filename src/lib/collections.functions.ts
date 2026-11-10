@@ -84,6 +84,9 @@ export const submitCollection = createServerFn({ method: "POST" })
   .inputValidator((input: SubmitInput) => {
     if (!input.customerId || !input.customerName) throw new Error("Customer is required");
     if (!input.amount || input.amount <= 0) throw new Error("Amount must be greater than zero");
+    if (!isValidTransactionDate(input.transactionDate)) {
+      throw new Error("A valid transaction date is required");
+    }
     if (!isValidWallet(input.wallet)) {
       throw new Error("Wallet is required");
     }
@@ -353,7 +356,7 @@ export const analyzeScreenshot = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { extractImage } = await import("./sms-ai.server");
     const extraction = await extractImage(data.image.dataBase64, data.image.mimeType);
-    // Keep the screenshot with the transaction when it has no receipt yet (column J).
+    // Keep the screenshot with the transaction when it has no receipt yet (column K).
     if (data.transactionId) {
       try {
         const gw = await import("./google-gateway");

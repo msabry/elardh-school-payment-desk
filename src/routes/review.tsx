@@ -23,7 +23,7 @@ import {
 } from "@/lib/collections.functions";
 
 import { TxFiltersBar } from "@/components/tx-filters";
-import { activeProgramIds, applyFilters, emptyFilters, isSupplierPayment, pickActiveEnrollment, type TxFilters } from "@/lib/filters";
+import { activeProgramIds, applyFilters, emptyFilters, isSupplierPayment, pickActiveEnrollment, transactionDay, type TxFilters } from "@/lib/filters";
 
 const WALLET_LABELS: Record<string, string> = {
   instapay: "إنستاباي",
@@ -237,7 +237,7 @@ function ReviewPage() {
                   <div>
                     <p className="text-sm font-semibold">{t.customerName}</p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      {isPayment(t) ? "دفعة لمورّد" : "تحصيل من عميل"} · {formatDate(t.date)}
+                      {isPayment(t) ? "دفعة لمورّد" : "تحصيل من عميل"} · {formatDate(t.transactionDate)}
                     </p>
                   </div>
                   <p className="whitespace-nowrap text-sm font-semibold text-primary">
@@ -364,13 +364,14 @@ function Row({
   );
 }
 
-function formatDate(iso: string) {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("ar-EG", {
+function formatDate(value: string) {
+  const day = transactionDay(value);
+  if (!day) return "—";
+  return new Date(`${day}T12:00:00.000Z`).toLocaleDateString("ar-EG", {
     day: "numeric",
     month: "long",
     year: "numeric",
+    timeZone: "UTC",
   });
 }
 

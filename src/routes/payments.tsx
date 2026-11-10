@@ -13,7 +13,7 @@ import {
 } from "@/lib/collections.functions";
 import { EntityPicker } from "@/components/entity-picker";
 import { SmartReadResult, customerSuggestions, WALLET_LABELS, type Extraction } from "@/components/smart-read";
-import { findMismatches } from "@/lib/filters";
+import { cairoDateString, findMismatches, isValidTransactionDate } from "@/lib/filters";
 
 export const Route = createFileRoute("/payments")({
   head: () => ({
@@ -47,6 +47,7 @@ function PaymentsPage() {
   const [supplier, setSupplier] = useState<{ id: string; name: string } | null>(null);
   const [expenseItem, setExpenseItem] = useState("");
   const [amount, setAmount] = useState("");
+  const [transactionDate, setTransactionDate] = useState(() => cairoDateString());
   const [reference, setReference] = useState("");
   const [wallet, setWallet] = useState("");
   const [sms, setSms] = useState("");
@@ -131,6 +132,10 @@ function PaymentsPage() {
       toast.error("أدخل مبلغاً صحيحاً");
       return;
     }
+    if (!isValidTransactionDate(transactionDate)) {
+      toast.error("أدخل تاريخ العملية");
+      return;
+    }
     if (!wallet) {
       toast.error("اختر المحفظة");
       return;
@@ -162,6 +167,7 @@ function PaymentsPage() {
           supplierName: supplier.name,
           expenseItem: expenseItem.trim(),
           amount: amt,
+          transactionDate,
           transferReference: reference.trim(),
           ...(sms.trim() ? { smsText: sms.trim() } : {}),
           wallet,
@@ -181,6 +187,7 @@ function PaymentsPage() {
     setSupplier(null);
     setExpenseItem("");
     setAmount("");
+    setTransactionDate(cairoDateString());
     setReference("");
     setWallet("");
     setSms("");
@@ -293,6 +300,17 @@ function PaymentsPage() {
               onChange={setSupplier}
               noMatchLabel="مورّد"
             />
+
+            <div>
+              <label className={labelCls}>تاريخ العملية</label>
+              <input
+                type="date"
+                required
+                value={transactionDate}
+                onChange={(e) => setTransactionDate(e.target.value)}
+                className={inputCls}
+              />
+            </div>
 
             <div>
               <label className={labelCls}>بند المصروف</label>

@@ -5,7 +5,7 @@ import { ArrowRight, ListChecks, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { getAllTransactions, type TransactionRow } from "@/lib/collections.functions";
 import { TxFiltersBar } from "@/components/tx-filters";
-import { applyFilters, emptyFilters, isSupplierPayment, type TxFilters } from "@/lib/filters";
+import { applyFilters, emptyFilters, isSupplierPayment, transactionDay, type TxFilters } from "@/lib/filters";
 
 export const Route = createFileRoute("/transactions")({
   head: () => ({
@@ -22,6 +22,13 @@ export const Route = createFileRoute("/transactions")({
 });
 
 const WALLET_LABELS: Record<string, string> = { instapay: "إنستاباي", vodaphone: "فودافون كاش", cash: "نقدي" };
+
+function formatDate(value: string) {
+  const day = transactionDay(value);
+  return day
+    ? new Date(`${day}T12:00:00.000Z`).toLocaleDateString("ar-EG", { timeZone: "UTC" })
+    : "—";
+}
 
 function TransactionsPage() {
   const [items, setItems] = useState<TransactionRow[] | null>(null);
@@ -82,7 +89,7 @@ function TransactionsPage() {
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {isSupplierPayment(t.transactionType) ? "دفعة لمورّد" : "تحصيل عميل"} ·{" "}
-                    {new Date(t.date).toLocaleDateString("ar-EG")} · {WALLET_LABELS[t.wallet] ?? "—"} ·{" "}
+                    {formatDate(t.transactionDate)} · {WALLET_LABELS[t.wallet] ?? "—"} ·{" "}
                     {t.status === "confirmed" ? "مؤكد" : t.status === "missing" ? "مفقود" : "في انتظار المراجعة"}
                   </p>
                   {(t.kidName || t.programName) && (
