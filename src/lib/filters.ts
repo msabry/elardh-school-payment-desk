@@ -2,6 +2,13 @@ export type TxFilters = { wallet: string; status: string; from: string; to: stri
 
 export const emptyFilters: TxFilters = { wallet: "", status: "", from: "", to: "" };
 
+/** Wallets the app accepts, saved verbatim in column L of Transactions. */
+export const WALLET_VALUES = ["instapay", "vodaphone", "cash"] as const;
+
+/** Every collection and supplier payment must say which wallet it went through. */
+export const isValidWallet = (wallet: string | undefined | null) =>
+  WALLET_VALUES.includes(((wallet ?? "").trim().toLowerCase()) as (typeof WALLET_VALUES)[number]);
+
 /** Confirmed transactions are final; every other status can be marked missing. */
 export const canMarkMissing = (status: string) => status.trim().toLowerCase() !== "confirmed";
 

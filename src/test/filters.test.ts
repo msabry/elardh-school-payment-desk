@@ -8,6 +8,7 @@ import {
   isProgramActive,
   isSupplierPayment,
   isUsableMasterRow,
+  isValidWallet,
   normalizeEnrollments,
   normalizePhone,
   pickActiveEnrollment,
@@ -29,6 +30,20 @@ describe("transaction filters", () => {
   });
   it("date range is inclusive", () => {
     expect(applyFilters(items, { ...emptyFilters, from: "2026-10-28", to: "2026-10-28" }).map((i) => i.id)).toEqual([2]);
+  });
+});
+
+describe("wallet is mandatory on every entry", () => {
+  it("accepts only the three wallets", () => {
+    expect(isValidWallet("instapay")).toBe(true);
+    expect(isValidWallet("vodaphone")).toBe(true);
+    expect(isValidWallet("cash")).toBe(true);
+    expect(isValidWallet(" INSTAPAY ")).toBe(true);
+  });
+  it("rejects a missing or unknown wallet", () => {
+    expect(isValidWallet("")).toBe(false);
+    expect(isValidWallet(undefined)).toBe(false);
+    expect(isValidWallet("wallet")).toBe(false);
   });
 });
 
